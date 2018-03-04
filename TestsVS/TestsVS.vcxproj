@@ -101,7 +101,7 @@
   <ItemGroup>
     <ClCompile Include="AknOT_TestsVS.cpp" />
     <ClCompile Include="BaseOT_TestsVS.cpp" />
-    <ClCompile Include="nOPRF_TestsVS.cpp" />
+    <ClCompile Include="PSU_TestsVS.cpp" />
     <ClCompile Include="OT_TestsVS.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

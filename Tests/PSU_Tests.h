@@ -3,6 +3,6 @@
 
 namespace tests_libOTe
 {
-	void nOPRF_100Receive_Test_Impl();
-
+	void Poly_IKNP_Test_Impl();
+	void PMT_Test_Impl();
 }

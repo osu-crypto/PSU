@@ -79,7 +79,7 @@
     <ClCompile Include="BaseOT_Tests.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="NcoOT_Tests.cpp" />
-    <ClCompile Include="nOPRF_Tests.cpp" />
+    <ClCompile Include="PSU_Tests.cpp" />
     <ClCompile Include="OTOracleReceiver.cpp" />
     <ClCompile Include="OTOracleSender.cpp" />
     <ClCompile Include="OT_Tests.cpp" />
@@ -90,7 +90,7 @@
     <ClInclude Include="BaseOT_Tests.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="NcoOT_Tests.h" />
-    <ClInclude Include="nOPRF_Tests.h" />
+    <ClInclude Include="PSU_Tests.h" />
     <ClInclude Include="OTOracleReceiver.h" />
     <ClInclude Include="OTOracleSender.h" />
     <ClInclude Include="OT_Tests.h" />

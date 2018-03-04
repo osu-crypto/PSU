@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #ifdef  _MSC_VER
 #include "CppUnitTest.h"
-#include "nOPRF_Tests.h"
+#include "PSU_Tests.h"
 #include "NcoOT_Tests.h"
 #include "Common.h"
 
@@ -14,12 +14,18 @@ namespace tests_libOTe
     public:
 
        
-        TEST_METHOD(nOPRF_100Receive_TestVS)
+        TEST_METHOD(Poly_IKNP_TestVS)
         {
             InitDebugPrinting();
-            nOPRF_100Receive_Test_Impl();
+			Poly_IKNP_Test_Impl();
         }
-		      
+		 
+
+		TEST_METHOD(PMT_TestVS)
+		{
+			InitDebugPrinting();
+			PMT_Test_Impl();
+		}
 
     };
 }
