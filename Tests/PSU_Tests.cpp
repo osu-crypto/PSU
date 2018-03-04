@@ -278,7 +278,7 @@ namespace tests_libOTe
 		std::cout << sBlock[0] << std::endl;
 
 		BitVector s(ell);
-		s.fromBlock(&sBlock[0]);
+		//s.fromBlock(&sBlock[0]);
 
 		std::cout << s << std::endl;
 
