@@ -25,6 +25,17 @@
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
 
+#include "NTL/GF2EX.h"
+#include "NTL/GF2XFactoring.h"
+#include <NTL/GF2E.h>
+#include "NTL/GF2EX.h"
+#include <NTL/ZZ_pE.h>
+#include <NTL/vec_ZZ_pE.h>
+#include "NTL/GF2EX.h"
+#include "NTL/ZZ_p.h"
+#include "NTL/GF2EX.h" 
+#include "NTL/GF2XFactoring.h"
+
 #include "Common.h"
 #include <thread>
 #include <vector>
@@ -42,6 +53,119 @@ using namespace osuCrypto;
 
 namespace tests_libOTe
 {
+	class polyNTL
+	{
+	public:
+		polyNTL();
+		~polyNTL();
+
+
+		NTL::GF2X mGf2x;
+		u64 mPolyNumBytes;
+
+		void NtlPolyInit(u64 numBytes) {
+			mGf2x.~GF2X();
+			mPolyNumBytes = numBytes;
+			NTL::BuildIrred(mGf2x, numBytes * 8);
+			NTL::GF2E::init(mGf2x);
+		}
+
+		void GF2EFromBlock(NTL::GF2E &element, block& blk, u64 size) {
+			NTL::GF2XFromBytes(mGf2x, (u8*)&blk, size);
+			element = to_GF2E(mGf2x);
+		}
+
+		void BlockFromGF2E(block& blk, NTL::GF2E & element, u64 size) {
+			NTL::GF2X fromEl = NTL::rep(element); //convert the GF2E element to GF2X element. the function rep returns the representation of GF2E as the related GF2X, it returns as read only.
+			BytesFromGF2X((u8*)&blk, fromEl, size);
+		}
+
+		//computes coefficients (in blocks) of f such that f(x[i]) = y[i]
+		void getBlkCoefficients(NTL::vec_GF2E& vecX, NTL::vec_GF2E& vecY, std::vector<block>& coeffs)
+		{
+			NTL::GF2E e;
+
+			//interpolate
+			NTL::GF2EX polynomial = NTL::interpolate(vecX, vecY);
+
+			////convert coefficient to vector<block> 
+			coeffs.resize(NTL::deg(polynomial) + 1);
+			for (int i = 0; i < coeffs.size(); i++) {
+				//get the coefficient polynomial
+				e = NTL::coeff(polynomial, i);
+				BlockFromGF2E(coeffs[i], e, mPolyNumBytes);
+			}
+		}
+
+		void getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs)
+		{
+			//degree = setX.size() - 1;
+			NTL::vec_GF2E x; NTL::vec_GF2E y;
+			NTL::GF2E e;
+
+			for (u64 i = 0; i < setX.size(); ++i)
+			{
+				GF2EFromBlock(e, setX[i], mPolyNumBytes);
+				x.append(e);
+
+				GF2EFromBlock(e, setY[i], mPolyNumBytes);
+				y.append(e);
+			}
+
+
+			NTL::GF2EX polynomial = NTL::interpolate(x, y);
+
+
+			//indeed, we dont need to pad dummy item to max_bin_size
+			//we can compute a polynomial over real items
+			//for exaple, there are 3 items in a bin (xi,yi) => interpolate poly p1(x) of a degree 2
+			// gererate a root poly pRoot(x) of degree 2 over (xi,0)
+			// gererate a dummy poly dummy(x) of degree max_bin_size - degree of p1(x)
+			//send coff of poly dummy(x)*pRoot(x)+p1(x)
+			//if x*=xi =>pRoot(xi)=0 => get p1(x*)
+
+			NTL::GF2EX root_polynomial;
+			NTL::BuildFromRoots(root_polynomial, x);
+
+
+			NTL::GF2EX dummy_polynomial;
+			NTL::random(dummy_polynomial, degree - setX.size());
+			NTL::GF2EX d_polynomial;
+			polynomial = polynomial + dummy_polynomial*root_polynomial;
+
+			coeffs.resize(NTL::deg(polynomial) + 1);
+			for (int i = 0; i < coeffs.size(); i++) {
+				//get the coefficient polynomial
+				e = NTL::coeff(polynomial, i);
+				BlockFromGF2E(coeffs[i], e, mPolyNumBytes);
+			}
+
+			//GF2EFromBlock(e, setX[0], mNumBytes);
+			//e = NTL::eval(polynomial, e); //get y=f(x) in GF2E
+			//BlockFromGF2E(y1, e, mNumBytes); //convert to block 
+			//std::cout << setX[0] << "\t" << y1 <<" 2"<< std::endl;
+		}
+
+		//compute y=f(x) giving coefficients (in block)
+		void evalPolynomial(std::vector<block>& coeffs, block& x, block& y)
+		{
+			NTL::GF2EX res_polynomial;
+			NTL::GF2E e;
+			//std::cout << coeffs.size() << std::endl;
+			for (u64 i = 0; i < coeffs.size(); ++i)
+			{
+				GF2EFromBlock(e, coeffs[i], mPolyNumBytes);
+				NTL::SetCoeff(res_polynomial, i, e); //build res_polynomial
+			}
+
+			GF2EFromBlock(e, x, mPolyNumBytes);
+			e = NTL::eval(res_polynomial, e); //get y=f(x) in GF2E
+			BlockFromGF2E(y, e, mPolyNumBytes); //convert to block 
+		}
+
+	};
+
+
 	inline void sse_trans(uint8_t *inp, int nrows, int ncols) {
 #   define INP(x,y) inp[(x)*ncols/8 + (y)/8]
 #   define OUT(x,y) inp[(y)*nrows/8 + (x)/8]
@@ -87,6 +211,8 @@ namespace tests_libOTe
 #undef OUT
 	}
 	
+
+
 	void OT_Receive_Test(BitVector& choiceBits, gsl::span<block> recv, gsl::span<std::array<block, 2>>  sender)
 	{
 
@@ -369,7 +495,8 @@ namespace tests_libOTe
 	void PMT_Test_Impl()
 	{
 		setThreadName("Sender"); 
-		u64 sendSetSize = 5, recvSetSize = 10, psiSecParam = 40;
+		u64 sendSetSize = 20, recvSetSize = 20, psiSecParam = 40, maxBinSize = sendSetSize + 1;
+		u64 polyNumBytes = 128 / 8, polyDegree = maxBinSize + 1;
 
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
@@ -384,14 +511,25 @@ namespace tests_libOTe
 
 		sendSet[0] = recvSet[0];
 		sendSet[2] = recvSet[2];
+		
+
+		// set up networking
+		std::string name = "n";
+		IOService ios;
+		Session ep0(ios, "localhost", 1212, SessionMode::Server, name);
+		Session ep1(ios, "localhost", 1212, SessionMode::Client, name);
+		auto recvChl = ep1.addChannel(name, name);
+		auto sendChl = ep0.addChannel(name, name);
+
+#pragma region OPRF
 		// The total number that we wish to do
 		u64 numOTs = recvSetSize;
 
-		KkrtNcoOtSender sender; sender.configure(false, psiSecParam, 128);
-		KkrtNcoOtReceiver recv; recv.configure(false, psiSecParam, 128);
+		KkrtNcoOtSender senderOprf; senderOprf.configure(false, psiSecParam, 128);
+		KkrtNcoOtReceiver recvOprf; recvOprf.configure(false, psiSecParam, 128);
 
 		// the number of base OT that need to be done
-		u64 baseCount = sender.getBaseOTCount();
+		u64 baseCount = senderOprf.getBaseOTCount();
 
 		// Fake some base OTs
 		std::vector<block> baseRecv(baseCount);
@@ -402,74 +540,139 @@ namespace tests_libOTe
 		for (u64 i = 0; i < baseCount; ++i)
 			baseRecv[i] = baseSend[i][baseChoice[i]];
 
-		// set up networking
-		std::string name = "n";
-		IOService ios;
-		Session ep0(ios, "localhost", 1212, SessionMode::Server, name);
-		Session ep1(ios, "localhost", 1212, SessionMode::Client, name);
-		auto recvChl = ep1.addChannel(name, name);
-		auto sendChl = ep0.addChannel(name, name);
-
-
-		u64 stepSize = 1;
-		std::vector<block> encoding1(numOTs);
-		std::vector<std::vector<block>>encoding2(numOTs);
+		u64 stepSize = 5;
+		std::vector<block> recvEncoding(numOTs), Ss(numOTs), Sr(numOTs);
+		std::vector<std::vector<block>>sendEncoding(numOTs);
 		
-		for (u64 i = 0; i < numOTs; i ++)
+
+		for (u64 i = 0; i < numOTs; i++)
 		{
-			encoding2[i].resize(sendSetSize);
+			Ss[i]= prng0.get<block>();
+			sendEncoding[i].resize(sendSetSize);
 		}
 
-
 		auto thrd = std::thread([&]() {
-			sender.setBaseOts(baseRecv, baseChoice);
-			sender.init(numOTs, prng0, sendChl);
+			std::vector<block> coeffs;
+
+			senderOprf.setBaseOts(baseRecv, baseChoice);
+			senderOprf.init(numOTs, prng0, recvChl);
+			/*polyNTL poly;
+			poly.NtlPolyInit(polyNumBytes);*/
 
 			u64 idx = 0;
 			for (u64 i = 0; i < numOTs; i += stepSize)
 			{
-				sender.recvCorrection(sendChl, stepSize);
+				auto curStepSize = std::min(stepSize, numOTs - i);
+				senderOprf.recvCorrection(recvChl, curStepSize);
 
-				for (u64 k = 0; k < stepSize; ++k)
+
+				for (u64 k = 0; k < curStepSize; ++k)
 				{
 					for (u64 j = 0; j < sendSetSize; ++j)
-						sender.encode(i + k, &sendSet[j], (u8*)&encoding2[i+k][j], sizeof(block));
+						senderOprf.encode(i + k, &sendSet[j], (u8*)&sendEncoding[i + k][j], sizeof(block));
+					
+					//Poly
+				/*	
+				std::vector<u8> sendBuff(curStepSize*(polyDegree + 1)* poly.mPolyNumBytes);
 
+				std::vector<block> setY(sendSetSize+1),setX(sendSetSize+1);
+					for (u64 j = 0; j < sendSetSize; ++j)
+					{
+						setY[j] = Ss[j];
+						setX[j] = sendEncoding[i + k][j];
+					}
+
+					setY[sendSetSize] = prng0.get<block>();
+					setX[sendSetSize] = prng0.get<block>();*/
+
+					//getBlkCoefficients(polyDegree, setX, setY, coeffs);
+					
+
+	/*				for (u64 c = 0; c < coeffs.size(); ++c)
+						memcpy(sendBuff.data() + c* mPolyNumBytes, (u8*)&coeffs[c], mPolyNumBytes);
+
+					if (i + k == 0)
+					{
+						std::cout << "Ss[" << i + k << "]" << Ss[i + k] << "\t";
+						std::cout << "coeffs[0]" << coeffs[0] << std::endl;
+					}*/
 				}
+			
+				//recvChl.asyncSend(std::move(sendBuff));
 			}
-
 		});
 		
-		recv.setBaseOts(baseSend);
-		recv.init(numOTs, prng1, recvChl);
-		
+		recvOprf.setBaseOts(baseSend);
+		recvOprf.init(numOTs, prng1, sendChl);
+		/*polyNTL poly;
+		poly.NtlPolyInit(polyNumBytes);*/
+
 		for (u64 i = 0; i < numOTs; i += stepSize)
 		{
-			for (u64 k = 0; k < stepSize; ++k)
+			auto curStepSize = std::min(stepSize, numOTs - i);
+			
+			for (u64 k = 0; k < curStepSize; ++k)
+				recvOprf.encode(i + k, &recvSet[i+k], (u8*)&recvEncoding[i+k], sizeof(block));
+			
+			recvOprf.sendCorrection(sendChl, curStepSize);
+
+			//poly
+			/*std::vector<u8> recvBuff;
+			sendChl.recv(recvBuff);
+			if (recvBuff.size() != curStepSize*(polyDegree + 1)* mPolyNumBytes)
 			{
-				recv.encode(i + k, &recvSet[i+k], (u8*)&encoding1[i+k], sizeof(block));
+				std::cout << "error @ " << (LOCATION) << std::endl;
+				throw std::runtime_error(LOCATION);
 			}
-			recv.sendCorrection(recvChl, stepSize);
+
+			std::vector<block> coeffs;
+
+			for (u64 k = 0; k < curStepSize; ++k)
+			{
+				for (u64 c = 0; c < coeffs.size(); ++c)
+					memcpy( (u8*)&coeffs[c], recvBuff.data() + c* mPolyNumBytes, mPolyNumBytes);
+			
+				evalPolynomial(coeffs, recvEncoding[i + k], Sr[i+k]);
+				
+				if (i + k == 0)
+				{
+					std::cout << "Sr[" << i + k << "]" << Sr[i + k] << "\t";
+					std::cout << "coeffs[0]" << coeffs[0] << std::endl;
+				}
+			}*/
 
 		}
 
 		thrd.join();
 
-
-		if (neq(encoding1[0], encoding2[0][0]) || neq(encoding1[2], encoding2[2][2]))
+		if (neq(recvEncoding[0], sendEncoding[0][0]) || neq(recvEncoding[2], sendEncoding[2][2]))
 		{
-			std::cout << "neq(encoding1[0], encoding2[0][0]) || neq(encoding1[2], encoding2[2][2])" << std::endl;
+			std::cout << "neq(recvEncoding[0], sendEncoding[0][0]) || neq(recvEncoding[2], sendEncoding[2][2])" << std::endl;
 			throw UnitTestFail();
 		}
 
+#pragma endregion
+
+		/*NtlPolyInit(128/8);
+		std::vector<block> coeffs;
+		sendSetSize = 5;
+		std::vector<block> setY(sendSetSize), setX(sendSetSize);
+		for (u64 i = 0; i < sendSetSize; i++)
+		{
+			setY[i] = prng0.get<block>();;
+			setX[i] = prng0.get<block>();;
+		}
 
 
-		sendChl.close();
-		recvChl.close();
+		getBlkCoefficients(sendSetSize+2, setX, setY, coeffs);*/
 
-		ep0.stop();
-		ep1.stop();
-		ios.stop();
+		//evalPolynomial(coeffs, setX[0], y2);
+		
+
+
+
+
+		sendChl.close(); recvChl.close();ep0.stop(); ep1.stop(); ios.stop();
 	}
 
 
