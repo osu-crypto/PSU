@@ -24,17 +24,11 @@
 
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
+#include "libPoly/polyNTL.h"
+#include "PsuDefines.h"
 
-#include "NTL/GF2EX.h"
-#include "NTL/GF2XFactoring.h"
-#include <NTL/GF2E.h>
-#include "NTL/GF2EX.h"
-#include <NTL/ZZ_pE.h>
-#include <NTL/vec_ZZ_pE.h>
-#include "NTL/GF2EX.h"
-#include "NTL/ZZ_p.h"
-#include "NTL/GF2EX.h" 
-#include "NTL/GF2XFactoring.h"
+#include "PSU/KrtwSender.h"
+#include "PSU/KrtwReceiver.h"
 
 #include "Common.h"
 #include <thread>
@@ -53,118 +47,6 @@ using namespace osuCrypto;
 
 namespace tests_libOTe
 {
-	class polyNTL
-	{
-	public:
-		polyNTL();
-		~polyNTL();
-
-
-		NTL::GF2X mGf2x;
-		u64 mPolyNumBytes;
-
-		void NtlPolyInit(u64 numBytes) {
-			mGf2x.~GF2X();
-			mPolyNumBytes = numBytes;
-			NTL::BuildIrred(mGf2x, numBytes * 8);
-			NTL::GF2E::init(mGf2x);
-		}
-
-		void GF2EFromBlock(NTL::GF2E &element, block& blk, u64 size) {
-			NTL::GF2XFromBytes(mGf2x, (u8*)&blk, size);
-			element = to_GF2E(mGf2x);
-		}
-
-		void BlockFromGF2E(block& blk, NTL::GF2E & element, u64 size) {
-			NTL::GF2X fromEl = NTL::rep(element); //convert the GF2E element to GF2X element. the function rep returns the representation of GF2E as the related GF2X, it returns as read only.
-			BytesFromGF2X((u8*)&blk, fromEl, size);
-		}
-
-		//computes coefficients (in blocks) of f such that f(x[i]) = y[i]
-		void getBlkCoefficients(NTL::vec_GF2E& vecX, NTL::vec_GF2E& vecY, std::vector<block>& coeffs)
-		{
-			NTL::GF2E e;
-
-			//interpolate
-			NTL::GF2EX polynomial = NTL::interpolate(vecX, vecY);
-
-			////convert coefficient to vector<block> 
-			coeffs.resize(NTL::deg(polynomial) + 1);
-			for (int i = 0; i < coeffs.size(); i++) {
-				//get the coefficient polynomial
-				e = NTL::coeff(polynomial, i);
-				BlockFromGF2E(coeffs[i], e, mPolyNumBytes);
-			}
-		}
-
-		void getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs)
-		{
-			//degree = setX.size() - 1;
-			NTL::vec_GF2E x; NTL::vec_GF2E y;
-			NTL::GF2E e;
-
-			for (u64 i = 0; i < setX.size(); ++i)
-			{
-				GF2EFromBlock(e, setX[i], mPolyNumBytes);
-				x.append(e);
-
-				GF2EFromBlock(e, setY[i], mPolyNumBytes);
-				y.append(e);
-			}
-
-
-			NTL::GF2EX polynomial = NTL::interpolate(x, y);
-
-
-			//indeed, we dont need to pad dummy item to max_bin_size
-			//we can compute a polynomial over real items
-			//for exaple, there are 3 items in a bin (xi,yi) => interpolate poly p1(x) of a degree 2
-			// gererate a root poly pRoot(x) of degree 2 over (xi,0)
-			// gererate a dummy poly dummy(x) of degree max_bin_size - degree of p1(x)
-			//send coff of poly dummy(x)*pRoot(x)+p1(x)
-			//if x*=xi =>pRoot(xi)=0 => get p1(x*)
-
-			NTL::GF2EX root_polynomial;
-			NTL::BuildFromRoots(root_polynomial, x);
-
-
-			NTL::GF2EX dummy_polynomial;
-			NTL::random(dummy_polynomial, degree - setX.size());
-			NTL::GF2EX d_polynomial;
-			polynomial = polynomial + dummy_polynomial*root_polynomial;
-
-			coeffs.resize(NTL::deg(polynomial) + 1);
-			for (int i = 0; i < coeffs.size(); i++) {
-				//get the coefficient polynomial
-				e = NTL::coeff(polynomial, i);
-				BlockFromGF2E(coeffs[i], e, mPolyNumBytes);
-			}
-
-			//GF2EFromBlock(e, setX[0], mNumBytes);
-			//e = NTL::eval(polynomial, e); //get y=f(x) in GF2E
-			//BlockFromGF2E(y1, e, mNumBytes); //convert to block 
-			//std::cout << setX[0] << "\t" << y1 <<" 2"<< std::endl;
-		}
-
-		//compute y=f(x) giving coefficients (in block)
-		void evalPolynomial(std::vector<block>& coeffs, block& x, block& y)
-		{
-			NTL::GF2EX res_polynomial;
-			NTL::GF2E e;
-			//std::cout << coeffs.size() << std::endl;
-			for (u64 i = 0; i < coeffs.size(); ++i)
-			{
-				GF2EFromBlock(e, coeffs[i], mPolyNumBytes);
-				NTL::SetCoeff(res_polynomial, i, e); //build res_polynomial
-			}
-
-			GF2EFromBlock(e, x, mPolyNumBytes);
-			e = NTL::eval(res_polynomial, e); //get y=f(x) in GF2E
-			BlockFromGF2E(y, e, mPolyNumBytes); //convert to block 
-		}
-
-	};
-
 
 	inline void sse_trans(uint8_t *inp, int nrows, int ncols) {
 #   define INP(x,y) inp[(x)*ncols/8 + (y)/8]
@@ -492,7 +374,7 @@ namespace tests_libOTe
 
 
 	//PMT
-	void PMT_Test_Impl()
+	void PMT_Test_Impl1()
 	{
 		setThreadName("Sender"); 
 		u64 sendSetSize = 20, recvSetSize = 20, psiSecParam = 40, maxBinSize = sendSetSize + 1;
@@ -521,7 +403,8 @@ namespace tests_libOTe
 		auto recvChl = ep1.addChannel(name, name);
 		auto sendChl = ep0.addChannel(name, name);
 
-#pragma region OPRF
+
+#pragma region OPRF & poly
 		// The total number that we wish to do
 		u64 numOTs = recvSetSize;
 
@@ -542,22 +425,19 @@ namespace tests_libOTe
 
 		u64 stepSize = 5;
 		std::vector<block> recvEncoding(numOTs), Ss(numOTs), Sr(numOTs);
-		std::vector<std::vector<block>>sendEncoding(numOTs);
 		
 
 		for (u64 i = 0; i < numOTs; i++)
-		{
 			Ss[i]= prng0.get<block>();
-			sendEncoding[i].resize(sendSetSize);
-		}
 
+		//recv
 		auto thrd = std::thread([&]() {
 			std::vector<block> coeffs;
 
 			senderOprf.setBaseOts(baseRecv, baseChoice);
 			senderOprf.init(numOTs, prng0, recvChl);
-			/*polyNTL poly;
-			poly.NtlPolyInit(polyNumBytes);*/
+			polyNTL poly;
+			poly.NtlPolyInit(polyNumBytes);
 
 			u64 idx = 0;
 			for (u64 i = 0; i < numOTs; i += stepSize)
@@ -566,46 +446,40 @@ namespace tests_libOTe
 				senderOprf.recvCorrection(recvChl, curStepSize);
 
 
+				std::vector<u8> sendBuff(curStepSize*(polyDegree)* poly.mNumBytes);
+
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
+					std::vector<block> setY(sendSetSize + 1, Ss[i + k]);
+					std::vector<block>sendEncoding(setY.size());
+
 					for (u64 j = 0; j < sendSetSize; ++j)
-						senderOprf.encode(i + k, &sendSet[j], (u8*)&sendEncoding[i + k][j], sizeof(block));
+						senderOprf.encode(i + k, &sendSet[j], (u8*)&sendEncoding[j], sizeof(block));
 					
 					//Poly
-				/*	
-				std::vector<u8> sendBuff(curStepSize*(polyDegree + 1)* poly.mPolyNumBytes);
+					setY[sendSetSize] = prng0.get<block>(); //add randome point
+					sendEncoding[sendSetSize] = prng0.get<block>(); 
 
-				std::vector<block> setY(sendSetSize+1),setX(sendSetSize+1);
-					for (u64 j = 0; j < sendSetSize; ++j)
-					{
-						setY[j] = Ss[j];
-						setX[j] = sendEncoding[i + k][j];
-					}
-
-					setY[sendSetSize] = prng0.get<block>();
-					setX[sendSetSize] = prng0.get<block>();*/
-
-					//getBlkCoefficients(polyDegree, setX, setY, coeffs);
+					poly.getBlkCoefficients(polyDegree, sendEncoding, setY, coeffs);
 					
+					for (u64 c = 0; c < coeffs.size(); ++c)
+						memcpy(sendBuff.data() + (k*polyDegree+c)* poly.mNumBytes, (u8*)&coeffs[c], poly.mNumBytes);
 
-	/*				for (u64 c = 0; c < coeffs.size(); ++c)
-						memcpy(sendBuff.data() + c* mPolyNumBytes, (u8*)&coeffs[c], mPolyNumBytes);
-
-					if (i + k == 0)
+					if (i + k == 0 || i + k == 1)
 					{
 						std::cout << "Ss[" << i + k << "]" << Ss[i + k] << "\t";
 						std::cout << "coeffs[0]" << coeffs[0] << std::endl;
-					}*/
+
+					}
 				}
-			
-				//recvChl.asyncSend(std::move(sendBuff));
+				recvChl.asyncSend(std::move(sendBuff));
 			}
 		});
 		
 		recvOprf.setBaseOts(baseSend);
 		recvOprf.init(numOTs, prng1, sendChl);
-		/*polyNTL poly;
-		poly.NtlPolyInit(polyNumBytes);*/
+		polyNTL poly;
+		poly.NtlPolyInit(polyNumBytes);
 
 		for (u64 i = 0; i < numOTs; i += stepSize)
 		{
@@ -617,57 +491,35 @@ namespace tests_libOTe
 			recvOprf.sendCorrection(sendChl, curStepSize);
 
 			//poly
-			/*std::vector<u8> recvBuff;
+			std::vector<u8> recvBuff;
 			sendChl.recv(recvBuff);
-			if (recvBuff.size() != curStepSize*(polyDegree + 1)* mPolyNumBytes)
+			if (recvBuff.size() != curStepSize*(polyDegree)* poly.mNumBytes)
 			{
 				std::cout << "error @ " << (LOCATION) << std::endl;
 				throw std::runtime_error(LOCATION);
 			}
 
-			std::vector<block> coeffs;
+			std::vector<block> coeffs(polyDegree);
 
 			for (u64 k = 0; k < curStepSize; ++k)
 			{
-				for (u64 c = 0; c < coeffs.size(); ++c)
-					memcpy( (u8*)&coeffs[c], recvBuff.data() + c* mPolyNumBytes, mPolyNumBytes);
+				for (u64 c = 0; c < polyDegree; ++c)
+					memcpy( (u8*)&coeffs[c], recvBuff.data() + (k*polyDegree + c)* poly.mNumBytes, poly.mNumBytes);
 			
-				evalPolynomial(coeffs, recvEncoding[i + k], Sr[i+k]);
-				
-				if (i + k == 0)
+				poly.evalPolynomial(coeffs, recvEncoding[i + k], Sr[i + k]);
+				if (i + k == 0 || i + k == 1)
 				{
 					std::cout << "Sr[" << i + k << "]" << Sr[i + k] << "\t";
 					std::cout << "coeffs[0]" << coeffs[0] << std::endl;
 				}
-			}*/
+				
 
+			}
 		}
 
 		thrd.join();
-
-		if (neq(recvEncoding[0], sendEncoding[0][0]) || neq(recvEncoding[2], sendEncoding[2][2]))
-		{
-			std::cout << "neq(recvEncoding[0], sendEncoding[0][0]) || neq(recvEncoding[2], sendEncoding[2][2])" << std::endl;
-			throw UnitTestFail();
-		}
-
+			
 #pragma endregion
-
-		/*NtlPolyInit(128/8);
-		std::vector<block> coeffs;
-		sendSetSize = 5;
-		std::vector<block> setY(sendSetSize), setX(sendSetSize);
-		for (u64 i = 0; i < sendSetSize; i++)
-		{
-			setY[i] = prng0.get<block>();;
-			setX[i] = prng0.get<block>();;
-		}
-
-
-		getBlkCoefficients(sendSetSize+2, setX, setY, coeffs);*/
-
-		//evalPolynomial(coeffs, setX[0], y2);
-		
 
 
 
@@ -676,4 +528,74 @@ namespace tests_libOTe
 	}
 
 
+	void PMT_Test_Impl()
+	{
+		setThreadName("Sender");
+		u64 sendSetSize = 20, recvSetSize = 20, psiSecParam = 40, maxBinSize = sendSetSize + 1,numThreads(2);
+		u64 polyNumBytes = 128 / 8, polyDegree = maxBinSize + 1;
+
+		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
+
+
+		std::vector<block> sendSet(sendSetSize), recvSet(recvSetSize);
+		for (u64 i = 0; i < sendSetSize; ++i)
+			sendSet[i] = prng0.get<block>();
+
+		for (u64 i = 0; i < recvSetSize; ++i)
+			recvSet[i] = prng0.get<block>();
+
+		sendSet[0] = recvSet[0];
+		sendSet[2] = recvSet[2];
+
+
+		// set up networking
+		std::string name = "n";
+		IOService ios;
+		Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
+		Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
+
+		std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+		for (u64 i = 0; i < numThreads; ++i)
+		{
+			sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+			recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		}
+
+
+		KrtwSender sender;
+		KrtwReceiver recv;
+		auto thrd = std::thread([&]() {
+			recv.init(40, prng1, recvSet, recvChls);
+
+			std::cout << recv.mBaseOTRecv[0] << "\n";
+
+			recv.output(recvSet, recvChls);
+
+		});
+
+		sender.init(40, prng0, sendSet, sendChls);
+		
+
+		std::cout << sender.mBaseOTSend[0][0] << "\n";
+		std::cout << sender.mBaseOTSend[0][1] << "\n";
+
+		sender.output(sendSet, sendChls);
+		thrd.join();
+
+
+
+
+		for (u64 i = 0; i < numThreads; ++i)
+		{
+			sendChls[i].close();// = &ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+			recvChls[i].close();// = &ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		}
+
+		ep0.stop();
+		ep1.stop();
+		ios.stop();
+		
+
+	}
 }
