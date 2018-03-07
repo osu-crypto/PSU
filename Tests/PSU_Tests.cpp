@@ -29,6 +29,7 @@
 
 #include "PSU/KrtwSender.h"
 #include "PSU/KrtwReceiver.h"
+#include "Tools/SimpleIndex.h"
 
 #include "Common.h"
 #include <thread>
@@ -588,14 +589,19 @@ namespace tests_libOTe
 
 		for (u64 i = 0; i < numThreads; ++i)
 		{
-			sendChls[i].close();// = &ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
-			recvChls[i].close();// = &ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+			sendChls[i].close(); recvChls[i].close();
 		}
 
-		ep0.stop();
-		ep1.stop();
-		ios.stop();
-		
+		ep0.stop(); ep1.stop();	ios.stop();
 
+	}
+
+	void getBinSize() {
+		SimpleIndex simpleIndex;
+		u64 numBalls = 1 << 20;
+		u64 statSecParam = 40;
+		u64 numBins = numBalls / 20;
+		u64 b=simpleIndex.get_bin_size(numBins, numBalls, statSecParam);
+		std::cout << b << std::endl;
 	}
 }

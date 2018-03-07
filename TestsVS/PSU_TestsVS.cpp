@@ -27,6 +27,14 @@ namespace tests_libOTe
 			PMT_Test_Impl();
 		}
 
+		TEST_METHOD(getBinSize_TestVS)
+		{
+			InitDebugPrinting();
+			getBinSize();
+		}
+
+
+
     };
 }
 #endif

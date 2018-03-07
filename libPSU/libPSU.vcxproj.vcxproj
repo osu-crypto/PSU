@@ -17,11 +17,15 @@
   <ItemGroup>
     <ClCompile Include="PSU\KrtwReceiver.cpp" />
     <ClCompile Include="PSU\KrtwSender.cpp" />
+    <ClCompile Include="Tools\SimpleHasher.cpp" />
+    <ClCompile Include="Tools\SimpleIndex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PsuDefines.h" />
     <ClInclude Include="PSU\KrtwReceiver.h" />
     <ClInclude Include="PSU\KrtwSender.h" />
+    <ClInclude Include="Tools\SimpleHasher.h" />
+    <ClInclude Include="Tools\SimpleIndex.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B2498D05-9678-481A-AE20-7CBB56B82A23}</ProjectGuid>

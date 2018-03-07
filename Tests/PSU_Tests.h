@@ -5,4 +5,5 @@ namespace tests_libOTe
 {
 	void Poly_IKNP_Test_Impl();
 	void PMT_Test_Impl();
+	void getBinSize();
 }
