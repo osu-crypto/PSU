@@ -27,10 +27,16 @@ namespace tests_libOTe
 			PMT_Test_Impl();
 		}
 
-		TEST_METHOD(getBinSize_TestVS)
+		TEST_METHOD(HashingParameters_CalcVS)
 		{
 			InitDebugPrinting();
-			getBinSize();
+			PSU_HashingParameters_Calculation();
+		}
+
+		TEST_METHOD(Hashing_TestVS)
+		{
+			InitDebugPrinting();
+			Hashing_Test_Impl();
 		}
 
 

@@ -596,12 +596,76 @@ namespace tests_libOTe
 
 	}
 
-	void getBinSize() {
+	void PSU_HashingParameters_Calculation() {
 		SimpleIndex simpleIndex;
-		u64 numBalls = 1 << 20;
-		u64 statSecParam = 40;
-		u64 numBins = numBalls / 20;
-		u64 b=simpleIndex.get_bin_size(numBins, numBalls, statSecParam);
-		std::cout << b << std::endl;
+		std::vector<u64> logNumBalls{ 8, 12, 16, 20, 24 };
+		std::vector<u64> lengthCodeWord{  424, 432, 440, 448, 448	};
+		u64 statSecParam = 40, lengthItem=128, compSecParam=128;
+		u64 commCost;
+		double scale = 0,m=0;
+		double iScaleStart = 0.03,iScaleEnd=0.08;
+
+		for (u64 idxN = 0; idxN < logNumBalls.size(); idxN++)
+		{
+			u64 numBalls = 1 << logNumBalls[idxN];
+			double iScale = iScaleStart;
+			while (iScale < iScaleEnd)
+			{
+				u64 numBins = iScale*numBalls;
+				u64 maxBinSize = simpleIndex.get_bin_size(numBins, numBalls, statSecParam);
+				u64 curCommCost = numBins * (maxBinSize)*lengthCodeWord[idxN]
+					+ numBins*maxBinSize * (maxBinSize + 2)*(statSecParam+log2(maxBinSize+2))
+					+ numBins * maxBinSize*(lengthCodeWord[idxN] + statSecParam)
+					+ numBins * maxBinSize*(compSecParam + lengthItem);
+				
+
+				if (iScale == iScaleStart)
+				{
+					commCost = curCommCost;
+					scale = iScale;
+					m = maxBinSize;
+				}
+				std::cout << iScale << "\t" << numBins << "\t" << maxBinSize <<"\t"
+					<< curCommCost << "\t" << commCost << "\t";
+
+				if (commCost > curCommCost)
+				{
+					commCost = curCommCost;
+					scale = iScale;
+					m = maxBinSize;
+
+				}
+
+				std::cout << scale << std::endl;
+
+				//std::cout << iScale << "\t" << commCost <<"\t"<< curCommCost << std::endl;
+				iScale += 0.0001;
+			}
+			std::cout << "##############" << std::endl;
+			std::cout << logNumBalls[idxN] << "\t" << scale << "\t" << m << "\t"<< (commCost/8)*pow(10,-9)<< std::endl;
+			std::cout << "##############" << std::endl;
+
+		}
+		
 	}
+
+	void Hashing_Test_Impl()
+	{
+		setThreadName("Sender");
+		u64 setSize = 1<<8, psiSecParam = 40,  numThreads(1);
+
+		PRNG prng(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+
+
+		std::vector<block> set(setSize);
+		for (u64 i = 0; i < set.size(); ++i)
+			set[i] = prng.get<block>();
+
+		SimpleIndex simple;
+		simple.init(setSize);
+		simple.insertItems(set,numThreads);
+		simple.print();
+
+	}
+
 }

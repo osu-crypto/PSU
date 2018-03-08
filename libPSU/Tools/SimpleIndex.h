@@ -30,45 +30,21 @@ namespace osuCrypto
     {
     public:
 
+		struct bin
+		{
+			std::vector<block> items;
+			u64 mBinRealSizes;
+		};
 
-        struct Item
-        {
-            Item() :mVal(-1) {}
-
-            bool isEmpty() const { return mVal == -1; }
-            u64 idx() const { return mVal  & (u64(-1) >> 8); }
-            u64 hashIdx() const { return ((u8*)&mVal)[7] & 127; }
-            bool isCollision() const { return  (((u8*)&mVal)[7] >> 7) > 0; }
-
-            void set(u64 idx, u8 hashIdx, bool collision)
-            {
-                mVal = idx;
-                ((u8*)&mVal)[7] = hashIdx | ((collision & 1) << 7);
-            }
-#ifdef THREAD_SAFE_SIMPLE_INDEX
-            Item(const Item& b) : mVal(b.mVal.load(std::memory_order_relaxed)) {}
-            Item(Item&& b) : mVal(b.mVal.load(std::memory_order_relaxed)) {}
-            std::atomic<u64> mVal;
-#else
-            Item(const Item& b) : mVal(b.mVal) {}
-            Item(Item&& b) : mVal(b.mVal) {}
-            u64 mVal;
-#endif
-        };
-
-
-
-        u64 mMaxBinSize, mNumHashFunctions;
-        Matrix<Item> mBins;
-        Matrix<u64> mItemToBinMap;
-        std::vector<u64> mBinSizes;
+        u64 mMaxBinSize, mNumBins;
+        std::vector<bin> mBins;
         block mHashSeed;
+		block mBlkDefaut;
         void print() ;
         static  u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam);
-        
 
-        void init(u64 numBins, u64 numBalls, u64 statSecParam = 40, u64 numHashFunction = 3);
-        void insertItems(span<block> items, block hashingSeed);
+		void init(u64 numBalls, bool isSender=true, u64 statSecParam = 40);
+        void insertItems(span<block> items, u64 numThreads);
     };
 
 }

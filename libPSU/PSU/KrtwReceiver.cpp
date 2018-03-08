@@ -42,10 +42,12 @@ namespace osuCrypto
 
 		senderOprf.init(numOTs, mPrng, recvChl);
 
+
+
 		polyNTL poly;
 		poly.NtlPolyInit(polyNumBytes);
 
-		for (u64 i = 0; i <10; i += stepSize)
+		for (u64 i = 0; i <numOTs; i += stepSize)
 		{
 
 			auto curStepSize = std::min(stepSize, numOTs - i);

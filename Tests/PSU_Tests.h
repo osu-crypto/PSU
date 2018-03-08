@@ -5,5 +5,6 @@ namespace tests_libOTe
 {
 	void Poly_IKNP_Test_Impl();
 	void PMT_Test_Impl();
-	void getBinSize();
+	void PSU_HashingParameters_Calculation();
+	void Hashing_Test_Impl();
 }
