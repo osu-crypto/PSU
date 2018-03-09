@@ -7,4 +7,5 @@ namespace tests_libOTe
 	void PMT_Test_Impl();
 	void PSU_HashingParameters_Calculation();
 	void Hashing_Test_Impl();
+	void NTL_Poly_Test_Impl();
 }

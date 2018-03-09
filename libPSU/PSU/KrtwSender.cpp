@@ -5,6 +5,7 @@
 #include <cryptoTools/Common/Timer.h>
 #include "libOTe/Base/naor-pinkas.h"
 #include "libPSU/PsuDefines.h"
+#include "Tools/SimpleIndex.h"
 
 
 namespace osuCrypto
@@ -75,6 +76,32 @@ namespace osuCrypto
 			}
 #endif
 		}
+	
+	
+		/*SimpleIndex simple;
+		simple.init(inputs.size());
+		simple.insertItems(inputs, chls.size());*/
+		
+
+		//pad with default block 
+		auto routines = [&](u64 t)
+		{
+			polyNTL poly1;
+			poly1.NtlPolyInit(polyNumBytes);
+		
+			
+		};
+
+		std::vector<std::thread> thrds(chls.size());
+		for (u64 i = 0; i < thrds.size(); ++i)
+		{
+			thrds[i] = std::thread([=] {
+				routines(i);
+			});
+		}
+
+		for (auto& thrd : thrds)
+			thrd.join();
 	}
 
 }

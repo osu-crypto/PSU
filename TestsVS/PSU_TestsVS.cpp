@@ -39,6 +39,12 @@ namespace tests_libOTe
 			Hashing_Test_Impl();
 		}
 
+		TEST_METHOD(NTL_Poly_TestVS)
+		{
+			InitDebugPrinting();
+			NTL_Poly_Test_Impl();
+		}
+
 
 
     };
