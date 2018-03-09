@@ -23,7 +23,7 @@ namespace osuCrypto
 
 		bool mHasBase;
 
-		u64 mNumOTs, mPolyNumBytes, mPolyDegree;
+		u64 mNumOTs, mPolyNumBytes, mPolyDegree, mPsiSecParam;
 		std::vector<block> mS;
 		KkrtNcoOtSender senderOprf;
 		polyNTL poly;

@@ -532,20 +532,18 @@ namespace tests_libOTe
 	void PMT_Test_Impl()
 	{
 		setThreadName("Sender");
-		u64 sendSetSize = 20, recvSetSize = 20, psiSecParam = 40, maxBinSize = sendSetSize + 1,numThreads(1);
-		u64 polyNumBytes = 128 / 8, polyDegree = maxBinSize + 1;
+		u64 setSize = 1 << 8, psiSecParam = 40, numThreads(1);
 
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 
-		std::vector<block> sendSet(sendSetSize), recvSet(recvSetSize);
-		for (u64 i = 0; i < sendSetSize; ++i)
+		std::vector<block> sendSet(setSize), recvSet(setSize);
+		for (u64 i = 0; i < setSize; ++i)
+		{
 			sendSet[i] = prng0.get<block>();
-
-		for (u64 i = 0; i < recvSetSize; ++i)
 			recvSet[i] = prng0.get<block>();
-
+		}
 		sendSet[0] = recvSet[0];
 		sendSet[2] = recvSet[2];
 
@@ -652,7 +650,7 @@ namespace tests_libOTe
 	void Hashing_Test_Impl()
 	{
 		setThreadName("Sender");
-		u64 setSize = 1<<8, psiSecParam = 40,  numThreads(1);
+		u64 setSize = 1<<8, psiSecParam = 40,  numThreads(2);
 
 		PRNG prng(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 
@@ -678,15 +676,27 @@ namespace tests_libOTe
 			poly.NtlPolyInit(128/8);
 			PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 
-			std::vector<block> setX(10), setY(10);
-			for (u64 i = 0; i < setX.size(); ++i)
+			std::vector<block> setX(10);
+			std::vector<block> setY(10, prng0.get<block>());
+
+			block a= prng0.get<block>();
+			for (u64 i = 0; i < 4; ++i)
 			{
 				setX[i] = prng0.get<block>();
-				setY[i] = prng0.get<block>();
 			}
-			
+
+			block b = prng0.get<block>();
+			for (u64 i = 5; i < setX.size(); ++i)
+			{
+				setX[i] = OneBlock;
+			}
+
+			setY[9] = prng0.get<block>();
+
+
+
 			std::vector<block> coeffs;
-			poly.getBlkCoefficients(setX.size()+1, setX, setY, coeffs);
+			poly.getBlkCoefficients(setX, setY, coeffs);
 
 			block y=ZeroBlock;
 			poly.evalPolynomial(coeffs, setX[0],y);
@@ -696,7 +706,7 @@ namespace tests_libOTe
 
 		};
 
-		std::vector<std::thread> thrds(2);
+		std::vector<std::thread> thrds(1);
 		for (u64 i = 0; i < thrds.size(); ++i)
 		{
 			thrds[i] = std::thread([=] {

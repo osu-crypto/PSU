@@ -107,7 +107,7 @@ namespace osuCrypto
     }
 
 
-    void SimpleIndex::init(u64 numBalls, bool isSender, u64 statSecParam)
+    void SimpleIndex::init(u64 numBalls, bool isReceiver, u64 statSecParam)
     {
 		if (numBalls <= 1 << 8)
 		{
@@ -134,8 +134,8 @@ namespace osuCrypto
 
 		mBins.resize(mNumBins);
 		
-		if (isSender) 
-			mMaxBinSize + 1;
+		if (isReceiver) 
+			mMaxBinSize += 1;
 
 		/*for (u64 i = 0; i < mBins.size(); i++)
 		{
