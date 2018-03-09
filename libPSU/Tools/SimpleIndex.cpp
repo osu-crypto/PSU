@@ -17,18 +17,14 @@ namespace osuCrypto
 		std::cout << "mMaxBinSize=" << mMaxBinSize << std::endl;
 		std::cout << "mNumBins=" << mNumBins << std::endl;
         for (u64 i = 0; i < mBins.size(); ++i)
-            //	for (u64 i = 0; i <1; ++i)
         {
             std::cout << "Bin #" << i << std::endl;
 
             std::cout << " contains " << mBins[i].mBinRealSizes << " elements" << std::endl;
 
-            for (u64 j = 0; j < mBins[i].mBinRealSizes; ++j)
+            for (u64 j = 0; j < mBins[i].items.size(); ++j)
                 std::cout << "    idx=" << mBins[i].items[j] << std::endl;
-
-			/*for (u64 j = mBins[i].mBinRealSizes; j<mMaxBinSize; ++j)
-				std::cout << "    idx=" << mBins[i].items[j] << std::endl;*/
-
+			
             std::cout << std::endl;
         }
 
@@ -204,8 +200,8 @@ namespace osuCrypto
 			for (u64 i = binStartIdx; i < binEndIdx; ++i)
 			{
 				mBins[i].mBinRealSizes = mBins[i].items.size();
-				/*for (u64 addr = mBins[i].mBinRealSizes; addr < mMaxBinSize; ++addr)
-					mBins[addr].items.push_back(mBlkDefaut);*/
+
+				mBins[i].items.resize(mMaxBinSize, mBlkDefaut);
 
 			}
 		};
