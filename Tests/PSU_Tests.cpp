@@ -696,7 +696,7 @@ namespace tests_libOTe
 
 
 			std::vector<block> coeffs;
-			poly.getBlkCoefficients(setX, setY, coeffs);
+			poly.getBlkCoefficients(11,setX, setY, coeffs);
 
 			block y=ZeroBlock;
 			poly.evalPolynomial(coeffs, setX[0],y);

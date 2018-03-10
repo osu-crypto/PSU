@@ -7,7 +7,6 @@
 #include "libPSU/PsuDefines.h"
 #include "Tools/SimpleIndex.h"
 
-
 namespace osuCrypto
 {
     using namespace std;
@@ -35,11 +34,18 @@ namespace osuCrypto
 		std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins
 			<< std::endl << IoStream::unlock;
 
+
+
+
 		u64 theirMaxBinSize = simple.mMaxBinSize + 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*simple.mMaxBinSize;
-		std::vector<block> recvEncoding(numOTs), Sr(numOTs);
+		
+	
+		std::vector<std::vector<block>> Sr(simple.mNumBins);
+		for (u64 i = 0; i < simple.mNumBins; i++)
+			Sr[i].resize(simple.mMaxBinSize);
 
-		recvOprf.init(numOTs, mPrng, chls[0]);
+		recvOprf.init(2 * numOTs, mPrng, chls[0]);
 
 		std::cout << IoStream::lock << "recvOprf.init done" << std::endl << IoStream::unlock;
 
@@ -57,48 +63,106 @@ namespace osuCrypto
 			for (u64 i = binStartIdx; i < binEndIdx; i += stepSize)
 			{
 				auto curStepSize = std::min(stepSize, binEndIdx - i);
+				std::vector<block> recvEncoding(curStepSize*simple.mMaxBinSize);
 
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
 					u64 binIdx = i + k;
-					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
-						recvOprf.encode(binIdx*simple.mMaxBinSize+itemIdx
-										, &simple.mBins[binIdx].items[itemIdx]
-										, (u8*)&recvEncoding[binIdx*simple.mMaxBinSize + itemIdx], sizeof(block));
+					for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx)
+					{
+						recvOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
+							, &simple.mBins[binIdx].items[itemIdx]
+							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
+					}
+
+					//TODO: send randome strings here
+					for (u64 itemIdx = simple.mBins[binIdx].mBinRealSizes; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						block rnd = mPrng.get<block>();
+						recvOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
+							, &rnd
+							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
+					}
 
 				}
 
 				recvOprf.sendCorrection(chl, curStepSize*simple.mMaxBinSize);
 
-				//poly
 
+#if 1 //poly
 				std::vector<u8> recvBuff;
 				chl.recv(recvBuff);
-				if (recvBuff.size() != curStepSize*simple.mMaxBinSize*(theirMaxBinSize+1)* polyMaskBytes)
+				if (recvBuff.size() != curStepSize*simple.mMaxBinSize*(theirMaxBinSize + 1)* polyMaskBytes)
 				{
 					std::cout << "error @ " << (LOCATION) << std::endl;
 					throw std::runtime_error(LOCATION);
 				}
-#if 0
+
+				std::cout << IoStream::lock;
 				polyNTL poly;
-				poly.NtlPolyInit(((mPsiSecParam + log2(simple.mMaxBinSize + 2) + 7) / 8));
-				std::vector<block> coeffs(mPolyDegree);
+				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+				std::cout << IoStream::unlock;
+
+				std::vector<block> coeffs(theirMaxBinSize+1);
 
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
-					for (u64 c = 0; c < mPolyDegree; ++c)
-						memcpy((u8*)&coeffs[c], recvBuff.data() + (k*mPolyDegree + c)* poly.mNumBytes, poly.mNumBytes);
+					u64 binIdx = i + k;
 
-					poly.evalPolynomial(coeffs, recvEncoding[i + k], Sr[i + k]);
-					if (i + k == 0 || i + k == 1)
+					for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx)
 					{
-						std::cout << "Sr[" << i + k << "]" << Sr[i + k] << "\t";
-						std::cout << "coeffs[0]" << coeffs[0] << std::endl;
+
+						for (u64 c = 0; c < coeffs.size(); ++c)
+							memcpy((u8*)&coeffs[c], recvBuff.data() + (k*itemIdx*(theirMaxBinSize + 1) + c)* polyMaskBytes, polyMaskBytes);
+							
+						std::cout << IoStream::lock;
+						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
+						std::cout << IoStream::unlock;
+
+						if (binIdx == 1 && itemIdx == 1)
+						{
+							std::cout << IoStream::lock << "mBins[1].items[1] " << simple.mBins[binIdx].items[itemIdx] << std::endl << IoStream::unlock;
+							std::cout << IoStream::lock << "Sr[1] " << Sr[binIdx][itemIdx] << std::endl << IoStream::unlock;
+
+						}
+						//std::cout << IoStream::lock << "s " << binIdx << "\t"  << itemIdx << std::endl << IoStream::unlock;
+
 					}
 
+					//compute same P(default)
+					for (u64 itemIdx = simple.mBins[binIdx].mBinRealSizes; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						Sr[binIdx][itemIdx] = Sr[binIdx][simple.mBins[binIdx].mBinRealSizes - 1];
+					}
 
-				}
+			}
 #endif
+
+#if 0 //PEQT
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					u64 binIdx = i + k;
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						//using second part of recvOprf (start at numOTs idx)
+						recvOprf.encode(numOTs+binIdx*simple.mMaxBinSize + itemIdx
+							, &Sr[binIdx][itemIdx]
+							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
+					}
+				}
+
+				recvOprf.sendCorrection(chl, curStepSize*simple.mMaxBinSize);
+
+				u64 maskPEQTlength = mPsiSecParam / 8;
+				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskPEQTlength);
+
+				for (u64 c = 0; c < recvEncoding.size(); ++c)
+					memcpy(sendBuff.data() + c* polyMaskBytes, (u8*)&recvEncoding[c], maskPEQTlength);
+
+				//chl.asyncSend(std::move(sendBuff)); //done with sending PEQT
+
+#endif
+
 			}
 
 

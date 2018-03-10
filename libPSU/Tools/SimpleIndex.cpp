@@ -190,31 +190,49 @@ namespace osuCrypto
 			thrd.join();
 
 
-		//pad with default block 
-		auto routineFullBins = [&](u64 t)
-		{
-			u64 binStartIdx = mNumBins * t / numThreads;
-			u64 tempBinEndIdx = (mNumBins * (t + 1) / numThreads);
-			u64 binEndIdx = std::min(tempBinEndIdx, mNumBins);
+		//For debug
+		mBins[1].items[1] = AllOneBlock;
 
-			for (u64 i = binStartIdx; i < binEndIdx; ++i)
+
+		//add a default block 
+			for (u64 i = 0; i < mNumBins; ++i)
 			{
+				if (mBins[i].items.size()<mMaxBinSize)
+					mBins[i].items.push_back(mBlkDefaut);
+
 				mBins[i].mBinRealSizes = mBins[i].items.size();
-
-				mBins[i].items.resize(mMaxBinSize, mBlkDefaut);
-
 			}
-		};
 
-		for (u64 i = 0; i < u64(numThreads); ++i)
-		{
-			thrds[i] = std::thread([=] {
-				routineFullBins(i);
-			});
-		}
+			
 
-		for (auto& thrd : thrds)
-			thrd.join();
+
+
+		//pad with default block 
+		//auto routineFullBins = [&](u64 t)
+		//{
+		//	u64 binStartIdx = mNumBins * t / numThreads;
+		//	u64 tempBinEndIdx = (mNumBins * (t + 1) / numThreads);
+		//	u64 binEndIdx = std::min(tempBinEndIdx, mNumBins);
+
+		//	for (u64 i = binStartIdx; i < binEndIdx; ++i)
+		//	{
+		//		mBins[i].mBinRealSizes = mBins[i].items.size();
+		//		mBins[i].items.push_back(mBlkDefaut);
+
+		//		//mBins[i].items.resize(mMaxBinSize, mBlkDefaut);
+
+		//	}
+		//};
+
+		//for (u64 i = 0; i < u64(numThreads); ++i)
+		//{
+		//	thrds[i] = std::thread([=] {
+		//		routineFullBins(i);
+		//	});
+		//}
+
+		//for (auto& thrd : thrds)
+		//	thrd.join();
 
 
     }

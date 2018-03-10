@@ -26,7 +26,7 @@ namespace osuCrypto {
 
 		u64 mNumOTs, mPolyNumBytes, mPolyDegree, mStepSize, mPsiSecParam;
 		std::vector<block> mS;
-		KkrtNcoOtReceiver recvOprf; 
+		KkrtNcoOtReceiver recvOprf;
 		polyNTL poly;
 		PRNG mPrng;
 		
