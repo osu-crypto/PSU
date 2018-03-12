@@ -120,7 +120,7 @@ namespace osuCrypto
 					{
 						block rnd = mPrng.get<block>();
 						recvOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
-							, &rnd
+							, &simple.mBlkDefaut
 							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
 					}
 
@@ -149,7 +149,7 @@ namespace osuCrypto
 				{
 					u64 binIdx = i + k;
 
-					for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx)
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
 					{
 
 						for (u64 c = 0; c < coeffs.size(); ++c)
@@ -170,10 +170,10 @@ namespace osuCrypto
 					}
 
 					//compute P(default) using same recvEnc
-					for (u64 itemIdx = simple.mBins[binIdx].mBinRealSizes; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					/*for (u64 itemIdx = simple.mBins[binIdx].mBinRealSizes; itemIdx < simple.mMaxBinSize; ++itemIdx)
 					{
 						Sr[binIdx][itemIdx] = Sr[binIdx][simple.mBins[binIdx].mBinRealSizes - 1];
-					}
+					}*/
 
 
 					/*if (binIdx == 1)

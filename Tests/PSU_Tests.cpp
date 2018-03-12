@@ -532,7 +532,7 @@ namespace tests_libOTe
 	void PMT_Test_Impl()
 	{
 		setThreadName("Sender");
-		u64 setSize = 1 << 8, psiSecParam = 40, numThreads(1);
+		u64 setSize = 1 << 7, psiSecParam = 40, numThreads(1);
 
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
@@ -544,8 +544,9 @@ namespace tests_libOTe
 			sendSet[i] = prng0.get<block>();
 			recvSet[i] = prng0.get<block>();
 		}
-		//sendSet[0] = recvSet[0];
+		sendSet[0] = recvSet[0];
 		sendSet[2] = recvSet[2];
+		std::cout << "intersection: " << sendSet[0] << "\n";
 		std::cout << "intersection: " << sendSet[2] << "\n";
 
 
