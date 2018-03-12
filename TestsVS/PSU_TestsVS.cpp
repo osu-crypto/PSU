@@ -46,6 +46,12 @@ namespace tests_libOTe
 		}
 
 
+		TEST_METHOD(myTestVS)
+		{
+			InitDebugPrinting();
+			myTest();
+		}
+
 
     };
 }

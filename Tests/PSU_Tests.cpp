@@ -544,8 +544,9 @@ namespace tests_libOTe
 			sendSet[i] = prng0.get<block>();
 			recvSet[i] = prng0.get<block>();
 		}
-		sendSet[0] = recvSet[0];
+		//sendSet[0] = recvSet[0];
 		sendSet[2] = recvSet[2];
+		std::cout << "intersection: " << sendSet[2] << "\n";
 
 
 		// set up networking
@@ -569,6 +570,9 @@ namespace tests_libOTe
 
 			std::cout << recv.mBaseOTRecv[0] << "\n";
 
+			std::cout << recv.mBaseOTSend[0][0] << "\t";
+			std::cout << recv.mBaseOTSend[0][1] << "\n";
+			
 			recv.output(recvSet, recvChls);
 
 		});
@@ -576,8 +580,9 @@ namespace tests_libOTe
 		sender.init(40, prng0, sendSet, sendChls);
 		
 
-		std::cout << sender.mBaseOTSend[0][0] << "\n";
+		std::cout << sender.mBaseOTSend[0][0] << "\t";
 		std::cout << sender.mBaseOTSend[0][1] << "\n";
+		std::cout << sender.mBaseOTRecv[0] << "\n";
 
 		sender.output(sendSet, sendChls);
 		thrd.join();
@@ -718,4 +723,15 @@ namespace tests_libOTe
 			thrd.join();
 	}
 
+	void myTest() {
+		BitVector a(2);
+		a[0] = 1;
+		a[1] = 0;
+
+		u8 aa=a[0] ^ a[1];
+		std::cout << unsigned(aa) << std::endl;
+		std::cout << sizeof(BYTE) << std::endl;
+
+
+	}
 }

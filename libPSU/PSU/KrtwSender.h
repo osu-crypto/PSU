@@ -5,6 +5,8 @@
 #include <cryptoTools/Crypto/PRNG.h>
 #include <cryptoTools/Network/Channel.h>
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
+#include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
+#include "libOTe/TwoChooseOne/IknpOtExtSender.h"
 #include "libPoly/polyNTL.h"
 
 #include <array>
@@ -27,9 +29,14 @@ namespace osuCrypto {
 		u64 mNumOTs, mPolyNumBytes, mPolyDegree, mStepSize, mPsiSecParam;
 		std::vector<block> mS;
 		KkrtNcoOtReceiver recvOprf;
+		KkrtNcoOtSender sendOprf; //PQET
+		
+
 		polyNTL poly;
 		PRNG mPrng;
 		
+		std::vector<block> mBaseOTRecv;
+		BitVector mBaseChoice;
 		std::vector<std::array<block, 2>> mBaseOTSend;
 
 		void init(u64 psiSecParam, PRNG& prng, span<block> inputs, span<Channel> chls);
