@@ -1,19 +1,105 @@
 
-#project(libPoly)
+#project(libPSI)
+
+
+##############################################
+##                 Link NTL                  #
+##############################################
+set(NTL_Lib_Dirs "${NTL_Dirs}src/")
+set(NTL_Include_Dirs "${NTL_Dirs}/include/")
+
+# default location for NTL
+#set(NTL_LIB "${NTL_Lib_Dirs}nnnnlibntl.a")
+
+
+#if(NOT EXISTS "${NTL_LIB}")
+  # we failed to find it, try using find_library
+  find_library(
+    NTL_LIB 
+    NAMES ntl libntl.a  
+    PATHS "${NTL_Lib_Dirs}")
+  
+  # if we still cant fint it, throw an error
+  if(NOT NTL_LIB) 
+	if(EXISTS "${NTL_Lib_Dirs}libntl.a")
+		set(NTL_LIB "${NTL_Lib_Dirs}libntl.a")
+	else()
+	   Message(${NTL_LIB})
+		message(FATAL_ERROR "Failed to find NTL at ${NTL_Lib_Dirs} or at system locations." )
+	endif()
+  endif()
+#endif()
+
+
+message(STATUS "NTL  ${NTL_LIB}")
+message(STATUS "NTL  ${NTL_Include_Dirs}")
+message(STATUS "NTL  ${NTL_Lib_Dirs}")
+#############################################
+#                 Link Boost                #
+#############################################
+
+
+set(Boost_USE_STATIC_LIBS        ON) # only find static libs
+set(Boost_USE_MULTITHREADED      ON)
+set(Boost_USE_STATIC_RUNTIME     ON)
+
+find_package(Boost  COMPONENTS system thread)
+
+if(Boost_FOUND)
+  message( "Found Boost at ${Boost_LIBRARIES}")
+else()
+   message(FATAL_ERROR "Failed to find boost at " ${Boost_Lib_Dirs} " Need system thread")
+endif()
+
+ 
+#############################################
+#                 Link Miracl               #
+#############################################
+find_library(
+  MIRACL_LIB 
+  NAMES miracl  
+  HINTS "${Miracl_Dirs}/miracl/source/")
+  
+# if we cant fint it, throw an error
+if(NOT MIRACL_LIB)
+  Message(${MIRACL_LIB})
+  message(FATAL_ERROR "Failed to find miracl at " ${Miracl_Dirs})
+else()
+  message("Miracl at  ${MIRACL_LIB}")
+endif()
+
+
+
+
+#############################################
+#                 Link libOTe               #
+#############################################
+
+
+find_library(
+    libOTe_LIB
+    NAMES libOTe
+    HINTS "${libOTe_Dirs}/lib/")
+	
+find_library(
+    cryptoTools_LIB
+    NAMES cryptoTools
+    HINTS "${libOTe_Dirs}/lib/")
+
+	
+#############################################
+#              Build libPSU                 #
+#############################################
 
 file(GLOB_RECURSE SRCS *.cpp)
-#include_directories(${CMAKE_SOURCE_DIR})
-add_library(libPoly STATIC ${SRCS})
+ 
 
-target_include_directories(libPoly PUBLIC ${CMAKE_SOURCE_DIR}) 
-target_link_libraries(libPoly cryptoTools)
+add_library(libPSU ${SRCS})
 
-#############################################
-#            Install                        #
-#############################################
 
-# install library
-install(TARGETS libPoly DESTINATION lib)
+target_include_directories(libPSU PUBLIC ${Boost_INCLUDE_DIR}) 
+target_include_directories(libPSU PUBLIC ${NTL_Include_Dirs}) 
+target_include_directories(libPSU PUBLIC ${CMAKE_SOURCE_DIR}/libPSU) 
+target_include_directories(libPSU PUBLIC ${CMAKE_SOURCE_DIR}/libPSU) 
 
-# install headers
-install(DIRECTORY . DESTINATION include/libPoly FILES_MATCHING PATTERN "*.h")
+target_link_libraries(libPSU ${libOTe_LIB}  ${cryptoTools_LIB} ${MIRACL_LIB}  ${Boost_LIBRARIES} ${NTL_LIB})

@@ -18,7 +18,7 @@ using namespace osuCrypto;
 #include <numeric>
 #include <cryptoTools/Common/Timer.h>
 #include <cryptoTools/Common/Log.h>
-int miraclTestMain();
+
 
 #include "libOTe/Tools/LinearCode.h"
 #include "libOTe/Tools/bch511.h"
@@ -38,265 +38,180 @@ int miraclTestMain();
 #include "CLP.h"
 #include "main.h"
 
+#include "libOTe/TwoChooseOne/OTExtInterface.h"
+
+#include "libOTe/Tools/Tools.h"
+#include "libOTe/Tools/LinearCode.h"
+#include <cryptoTools/Network/Channel.h>
+#include <cryptoTools/Network/Endpoint.h>
+#include <cryptoTools/Network/IOService.h>
+#include <cryptoTools/Common/Log.h>
+
+#include "libOTe/TwoChooseOne/IknpOtExtReceiver.h"
+#include "libOTe/TwoChooseOne/IknpOtExtSender.h"
+
+#include "libOTe/TwoChooseOne/KosOtExtReceiver.h"
+#include "libOTe/TwoChooseOne/KosOtExtSender.h"
+
+#include "libOTe/TwoChooseOne/LzKosOtExtReceiver.h"
+#include "libOTe/TwoChooseOne/LzKosOtExtSender.h"
+
+#include "libOTe/TwoChooseOne/KosDotExtReceiver.h"
+#include "libOTe/TwoChooseOne/KosDotExtSender.h"
+
+#include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
+#include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
+#include "Poly/polyNTL.h"
+#include "PsuDefines.h"
+
+#include "PSU/KrtwSender.h"
+#include "PSU/KrtwReceiver.h"
+#include "Tools/SimpleIndex.h"
+
+#include <thread>
+#include <vector>
 
 
-void kkrt_test(int i)
+void Sender()
 {
-    setThreadName("Sender");
+	u64 setSize = 1 << 7, psiSecParam = 40, numThreads(1);
 
-    PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
-
-    u64 step = 1024;
-    u64 numOTs = 1 << 16;
-    u64 numThreads = 1;
-
-    u64 otsPer = numOTs / numThreads;
-
-    auto rr = i ? EpMode::Server : EpMode::Client;
-    std::string name = "n";
-    IOService ios(0);
-    Endpoint ep0(ios, "localhost", 1212, rr, name);
-    std::vector<Channel> chls(numThreads);
-
-    for (u64 k = 0; k < numThreads; ++k)
-        chls[k] = ep0.addChannel(name + ToString(k), name + ToString(k));
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 
-
-    u64 ncoinputBlkSize = 1, baseCount = 4 * 128;
-    u64 codeSize = (baseCount + 127) / 128;
-
-    std::vector<block> baseRecv(baseCount);
-    std::vector<std::array<block, 2>> baseSend(baseCount);
-    BitVector baseChoice(baseCount);
-    baseChoice.randomize(prng0);
-
-    prng0.get((u8*)baseSend.data()->data(), sizeof(block) * 2 * baseSend.size());
-    for (u64 i = 0; i < baseCount; ++i)
-    {
-        baseRecv[i] = baseSend[i][baseChoice[i]];
-    }
-
-    block choice = prng0.get<block>();// ((u8*)choice.data(), ncoinputBlkSize * sizeof(block));
-
-    std::vector<std::thread> thds(numThreads);
-
-    if (i == 0)
-    {
-
-        for (u64 k = 0; k < numThreads; ++k)
-        {
-            thds[k] = std::thread(
-                [&, k]()
-            {
-                KkrtNcoOtReceiver r;
-                r.setBaseOts(baseSend);
-                auto& chl = chls[k];
-
-                r.init(otsPer, prng0, chl);
-                block encoding1;
-                for (u64 i = 0; i < otsPer; i += step)
-                {
-                    for (u64 j = 0; j < step; ++j)
-                    {
-                        r.encode(i + j, &choice, &encoding1);
-                    }
-
-                    r.sendCorrection(chl, step);
-                }
-                r.check(chl, ZeroBlock);
-
-                chl.close();
-            });
-        }
-        for (u64 k = 0; k < numThreads; ++k)
-            thds[k].join();
-    }
-    else
-    {
-        Timer time;
-        time.setTimePoint("start");
-        block encoding2;
-
-        for (u64 k = 0; k < numThreads; ++k)
-        {
-            thds[k] = std::thread(
-                [&, k]()
-            {
-                KkrtNcoOtSender s;
-                s.setBaseOts(baseRecv, baseChoice);
-                auto& chl = chls[k];
-
-                s.init(otsPer, prng0, chl);
-                for (u64 i = 0; i < otsPer; i += step)
-                {
-
-                    s.recvCorrection(chl, step);
-
-                    for (u64 j = 0; j < step; ++j)
-                    {
-                        s.encode(i + j, &choice, &encoding2);
-                    }
-                }
-                s.check(chl, ZeroBlock);
-                chl.close();
-            });
-        }
+	std::vector<block> sendSet(setSize), recvSet(setSize);
+	for (u64 i = 0; i < setSize; ++i)
+	{
+		sendSet[i] = prng0.get<block>();
+		recvSet[i] = prng0.get<block>();
+	}
+	sendSet[0] = recvSet[0];
+	sendSet[2] = recvSet[2];
+	std::cout << "intersection: " << sendSet[0] << "\n";
+	std::cout << "intersection: " << sendSet[2] << "\n";
 
 
-        for (u64 k = 0; k < numThreads; ++k)
-            thds[k].join();
+	// set up networking
+	std::string name = "n";
+	IOService ios;
+	Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
+	Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
 
-        time.setTimePoint("finish");
-        std::cout << time << std::endl;
-    }
+	std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+	for (u64 i = 0; i < numThreads; ++i)
+	{
+		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+	}
 
 
-    //for (u64 k = 0; k < numThreads; ++k)
-        //chls[k]->close();
+	KrtwSender sender;
+	KrtwReceiver recv;
+	auto thrd = std::thread([&]() {
+		recv.init(40, prng1, recvSet, recvChls);
 
-    ep0.stop();
-    ios.stop();
+		std::cout << recv.mBaseOTRecv[0] << "\n";
+
+		std::cout << recv.mBaseOTSend[0][0] << "\t";
+		std::cout << recv.mBaseOTSend[0][1] << "\n";
+
+		recv.output(recvSet, recvChls);
+
+	});
+
+	sender.init(40, prng0, sendSet, sendChls);
+
+
+	std::cout << sender.mBaseOTSend[0][0] << "\t";
+	std::cout << sender.mBaseOTSend[0][1] << "\n";
+	std::cout << sender.mBaseOTRecv[0] << "\n";
+
+	sender.output(sendSet, sendChls);
+	thrd.join();
+
+
+
+
+	for (u64 i = 0; i < numThreads; ++i)
+	{
+		sendChls[i].close(); recvChls[i].close();
+	}
+
+	ep0.stop(); ep1.stop();	ios.stop();
+
 }
 
-
-void iknp_test(int i)
+void PMT_Test_Impl()
 {
-    setThreadName("Sender");
+	u64 setSize = 1 << 7, psiSecParam = 40, numThreads(1);
 
-    PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
-
-    u64 numOTs = 1 << 16;
-
-    auto rr = i ? EpMode::Server : EpMode::Client;
-
-    // get up the networking
-    std::string name = "n";
-    IOService ios(0);
-    Endpoint ep0(ios, "localhost", 1212, rr, name);
-    Channel chl = ep0.addChannel(name, name);
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 
-    // cheat and compute the base OT in the clear.
-    u64 baseCount = 128;
-    std::vector<block> baseRecv(baseCount);
-    std::vector<std::array<block, 2>> baseSend(baseCount);
-    BitVector baseChoice(baseCount);
-    baseChoice.randomize(prng0);
-
-    prng0.get((u8*)baseSend.data()->data(), sizeof(block) * 2 * baseSend.size());
-    for (u64 i = 0; i < baseCount; ++i)
-    {
-        baseRecv[i] = baseSend[i][baseChoice[i]];
-    }
+	std::vector<block> sendSet(setSize), recvSet(setSize);
+	for (u64 i = 0; i < setSize; ++i)
+	{
+		sendSet[i] = prng0.get<block>();
+		recvSet[i] = prng0.get<block>();
+	}
+	sendSet[0] = recvSet[0];
+	sendSet[2] = recvSet[2];
+	std::cout << "intersection: " << sendSet[0] << "\n";
+	std::cout << "intersection: " << sendSet[2] << "\n";
 
 
+	// set up networking
+	std::string name = "n";
+	IOService ios;
+	Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
+	Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
+
+	std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+	for (u64 i = 0; i < numThreads; ++i)
+	{
+		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+	}
 
 
-    if (i)
-    {
-        BitVector choice(numOTs);
-        std::vector<block> msgs(numOTs);
-        choice.randomize(prng0);
-        IknpOtExtReceiver r;
-        r.setBaseOts(baseSend);
+	KrtwSender sender;
+	KrtwReceiver recv;
+	auto thrd = std::thread([&]() {
+		recv.init(40, prng1, recvSet, recvChls);
 
-        r.receive(choice, msgs, prng0, chl);
-    }
-    else
-    {
-        std::vector<std::array<block, 2>> msgs(numOTs);
+		std::cout << recv.mBaseOTRecv[0] << "\n";
 
-        Timer time;
-        time.setTimePoint("start");
-        IknpOtExtSender s;
-        s.setBaseOts(baseRecv, baseChoice);
+		std::cout << recv.mBaseOTSend[0][0] << "\t";
+		std::cout << recv.mBaseOTSend[0][1] << "\n";
 
-        s.send(msgs, prng0, chl);
+		recv.output(recvSet, recvChls);
 
-        time.setTimePoint("finish");
-        std::cout << time << std::endl;
+	});
 
-    }
+	sender.init(40, prng0, sendSet, sendChls);
 
 
-    chl.close();
+	std::cout << sender.mBaseOTSend[0][0] << "\t";
+	std::cout << sender.mBaseOTSend[0][1] << "\n";
+	std::cout << sender.mBaseOTRecv[0] << "\n";
 
-    ep0.stop();
-    ios.stop();
+	sender.output(sendSet, sendChls);
+	thrd.join();
+
+
+
+
+	for (u64 i = 0; i < numThreads; ++i)
+	{
+		sendChls[i].close(); recvChls[i].close();
+	}
+
+	ep0.stop(); ep1.stop();	ios.stop();
+
 }
 
-void code()
-{
-    PRNG prng(ZeroBlock);
-    LinearCode code;
-    code.random(prng, 128, 128 * 4);
-    u64 n = 1 << 24;
-
-    Timer t;
-    t.setTimePoint("start");
-
-    u8* in = new u8[code.plaintextU8Size()];
-    u8* out = new u8[code.codewordU8Size()];
-
-    for (u64 i = 0; i < n; ++i)
-    {
-        code.encode(in, out);
-    }
-
-    t.setTimePoint("end");
-    std::cout << t << std::endl;
-}
-
-
-
-void base()
-{
-
-    IOService ios(0);
-    Endpoint  ep0(ios, "127.0.0.1", 1212, EpMode::Server, "ep");
-    Endpoint  ep1(ios, "127.0.0.1", 1212, EpMode::Client, "ep");
-
-    auto chl1 = ep1.addChannel("s");
-    auto chl0 = ep0.addChannel("s");
-
-
-    NaorPinkas send, recv;
-
-
-    auto thrd = std::thread([&]() {
-
-        std::array<std::array<block, 2>, 128> msg;
-        PRNG prng(ZeroBlock);
-
-        for (u64 i = 0; i < 10; ++i)
-            send.send(msg, prng, chl0);
-    });
-
-
-    std::array<block, 128> msg;
-    PRNG prng(ZeroBlock);
-    BitVector choice(128);
-
-    Timer t;
-    t.setTimePoint("s");
-    for (u64 i = 0; i < 10; ++i)
-    {
-
-        recv.receive(choice, msg, prng, chl1);
-        t.setTimePoint("e");
-
-
-    }
-    std::cout << t << std::endl;
-
-
-    thrd.join();
-
-    chl1.close();
-    chl0.close();
-
-}
 
 #include <cryptoTools/gsl/span>
 
@@ -305,15 +220,11 @@ void base()
 int main(int argc, char** argv)
 {
 
-	auto thrd = std::thread([]() { iknp_test(0); });
-	iknp_test(1);
-	thrd.join();
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	PRNG prng1(_mm_set_epi32(4253233465, 334565, 0, 235));
 
+
+	PMT_Test_Impl();
   
-	/*thrd = std::thread([]() { kkrt_test(0); });
-	kkrt_test(1);
-	thrd.join();*/
-
-
 	return 0;
 }

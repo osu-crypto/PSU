@@ -36,8 +36,6 @@ namespace osuCrypto
 		
 		std::cout << "baseCount "<< baseCount << std::endl;
 
-
-		
 		
 
 	}
@@ -51,7 +49,7 @@ namespace osuCrypto
 		SimpleIndex simple;
 		simple.init(inputs.size(),false);
 		simple.insertItems(inputs, numThreads);
-		simple.print();
+		//simple.print();
 		std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins
 			<< std::endl << IoStream::unlock;
 
@@ -241,7 +239,7 @@ namespace osuCrypto
 					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
 					{
 						u8 isOtMsgSwap;
-						memcpy((u8*)&isOtMsgSwap, recvBuff.data() + (k*simple.mMaxBinSize + itemIdx), sizeof(BYTE));
+						memcpy((u8*)&isOtMsgSwap, recvBuff.data() + (k*simple.mMaxBinSize + itemIdx), sizeof(u8));
 					
 						if (binIdx == 1 && itemIdx == 1)
 							std::cout << IoStream::lock << "isOtMsgSwap: "  << unsigned(isOtMsgSwap) << std::endl << IoStream::unlock;

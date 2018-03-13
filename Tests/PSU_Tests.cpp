@@ -24,7 +24,7 @@
 
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
-#include "libPoly/polyNTL.h"
+#include "Poly/polyNTL.h"
 #include "PsuDefines.h"
 
 #include "PSU/KrtwSender.h"
@@ -600,7 +600,9 @@ namespace tests_libOTe
 
 	}
 
+
 	void PSU_HashingParameters_Calculation() {
+#if 0
 		SimpleIndex simpleIndex;
 		std::vector<u64> logNumBalls{ 8, 12, 16, 20, 24 };
 		std::vector<u64> lengthCodeWord{  424, 432, 440, 448, 448	};
@@ -650,7 +652,7 @@ namespace tests_libOTe
 			std::cout << "##############" << std::endl;
 
 		}
-		
+#endif	
 	}
 
 	void Hashing_Test_Impl()
@@ -731,7 +733,7 @@ namespace tests_libOTe
 
 		u8 aa=a[0] ^ a[1];
 		std::cout << unsigned(aa) << std::endl;
-		std::cout << sizeof(BYTE) << std::endl;
+		std::cout << sizeof(u8) << std::endl;
 
 
 	}

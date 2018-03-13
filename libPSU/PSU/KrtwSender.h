@@ -7,7 +7,7 @@
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
 #include "libOTe/TwoChooseOne/IknpOtExtSender.h"
-#include "libPoly/polyNTL.h"
+#include "Poly/polyNTL.h"
 
 #include <array>
 namespace osuCrypto {
@@ -16,14 +16,7 @@ namespace osuCrypto {
 	{
 	public:
 
-		KrtwSender::KrtwSender()
-		{
-		}
-
-		KrtwSender::~KrtwSender()
-		{
-		}
-
+		
 		bool mHasBase;
 
 		u64 mNumOTs, mPolyNumBytes, mPolyDegree, mStepSize, mPsiSecParam;

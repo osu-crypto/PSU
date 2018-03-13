@@ -6,7 +6,7 @@
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtSender.h"
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
 #include "libOTe/TwoChooseOne/IknpOtExtReceiver.h"
-#include "libPoly/polyNTL.h"
+#include "Poly/polyNTL.h"
 
 namespace osuCrypto
 {
@@ -15,14 +15,7 @@ namespace osuCrypto
     {
     public:
      
-		KrtwReceiver::KrtwReceiver()
-		{
-		}
-
-		KrtwReceiver::~KrtwReceiver()
-		{
-		}
-
+		
 		bool mHasBase;
 
 		u64 mNumOTs, mPolyNumBytes, mPolyDegree, mPsiSecParam;

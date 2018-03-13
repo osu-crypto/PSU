@@ -5,8 +5,8 @@
 #include "cryptoTools/Common/Log.h"
 #include "cryptoTools/Common/CuckooIndex.h"
 #include <numeric>
-#include <boost/math/special_functions/binomial.hpp>
-#include <boost/multiprecision/cpp_bin_float.hpp>
+//#include <boost/math/special_functions/binomial.hpp>
+//#include <boost/multiprecision/cpp_bin_float.hpp>
 
 namespace osuCrypto
 {
@@ -31,7 +31,7 @@ namespace osuCrypto
         std::cout << std::endl;
     }
 
-
+#if 0
     //template<unsigned int N = 16>
     double getBinOverflowProb(u64 numBins, u64 numBalls, u64 binSize, double epsilon = 0.0001)
     {
@@ -106,6 +106,7 @@ namespace osuCrypto
         return B;
     }
 
+#endif
 
     void SimpleIndex::init(u64 numBalls, bool isReceiver, u64 statSecParam)
     {
@@ -163,7 +164,8 @@ namespace osuCrypto
 
 			for (u64 i = inputStartIdx; i < inputEndIdx; ++i)
 			{
-				u64 addr = *(u64*)&hasher.ecbEncBlock(items[i]) % mNumBins;
+				block temp = hasher.ecbEncBlock(items[i]);
+				u64 addr = *(u64*)&temp % mNumBins;
 
 					if (isMultiThreaded)
 					{

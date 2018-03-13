@@ -41,7 +41,8 @@ namespace osuCrypto
         block mHashSeed;
 		block mBlkDefaut;
         void print() ;
-        static  u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam);
+
+        //static  u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam);
 
 		void init(u64 numBalls, bool isSender=true, u64 statSecParam = 40);
         void insertItems(span<block> items, u64 numThreads);

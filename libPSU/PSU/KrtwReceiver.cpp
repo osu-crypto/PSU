@@ -55,7 +55,7 @@ namespace osuCrypto
 		SimpleIndex simple;
 		simple.init(inputs.size(),true);
 		simple.insertItems(inputs, numThreads);
-		simple.print();
+		//simple.print();
 
 		std::cout << IoStream::lock << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins
 			<< std::endl << IoStream::unlock;
@@ -212,7 +212,7 @@ namespace osuCrypto
 						if (!memcmp(&rcv, &recvEncoding[k*theirMaxBinSize + itemTheirIdx], maskPEQTlength))
 						{
 							bitPSU[k*theirMaxBinSize + itemTheirIdx] = 1;
-							std::cout << binIdx << "\t" << itemTheirIdx << "\t" << std::endl;
+							//std::cout << binIdx << "\t" << itemTheirIdx << "\t" << std::endl;
 						}
 
 					}
@@ -220,7 +220,7 @@ namespace osuCrypto
 
 #endif
 
-				sendBuff.resize(curStepSize*theirMaxBinSize*sizeof(BYTE));
+				sendBuff.resize(curStepSize*theirMaxBinSize*sizeof(u8));
 
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
@@ -229,7 +229,7 @@ namespace osuCrypto
 					{
 						u8 isOtMsgSwap = bitPSU[k*theirMaxBinSize + itemTheirIdx] ^ choicesOT[binIdx*theirMaxBinSize + itemTheirIdx];
 							memcpy(sendBuff.data() + (k*theirMaxBinSize+ itemTheirIdx)
-							, (u8*)&isOtMsgSwap, sizeof(BYTE));
+							, (u8*)&isOtMsgSwap, sizeof(u8));
 					
 							if (binIdx == 1 && itemTheirIdx == 1)
 								std::cout << IoStream::lock << bitPSU[k*theirMaxBinSize + itemTheirIdx] 
