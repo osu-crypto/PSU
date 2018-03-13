@@ -49,7 +49,7 @@ namespace osuCrypto
 		simple.insertItems(inputs, numThreads);
 		//simple.print();
 
-		std::cout << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins<< std::endl ;
+		//std::cout << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins<< std::endl ;
 
 		u64 theirMaxBinSize = simple.mMaxBinSize - 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*(theirMaxBinSize);
@@ -87,13 +87,8 @@ namespace osuCrypto
 
 		std::cout << IoStream::lock << recvOTMsg[0] << std::endl << IoStream::unlock;
 
-		std::cout << IoStream::lock << "sendOprf.init done" << std::endl << IoStream::unlock;
-
 		//poly
-		u64 polyMaskBytes = 128 / 8; //(mPsiSecParam + log2(simple.mMaxBinSize + 1) + 7) / 8;
-
-		std::cout << IoStream::lock << "polyMaskBytes " << polyMaskBytes << std::endl << IoStream::unlock;
-
+		u64 polyMaskBytes = (mPsiSecParam + log2(simple.mMaxBinSize + 1) + 7) / 8;
 
 		auto routine = [&](u64 t)
 		{
@@ -102,10 +97,15 @@ namespace osuCrypto
 			u64 tempBinEndIdx = (simple.mNumBins * (t + 1) / numThreads);
 			u64 binEndIdx = std::min(tempBinEndIdx, simple.mNumBins);
 			
+#ifdef NTL_Threads
 			std::cout << IoStream::lock;
 			polyNTL poly;
 			poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
 			std::cout << IoStream::unlock;
+#else
+			polyNTL poly;
+			poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+#endif
 
 			for (u64 i = binStartIdx; i < binEndIdx; i += stepSize)
 			{
@@ -133,10 +133,13 @@ namespace osuCrypto
 						sendEncoding.emplace_back(mPrng.get<block>());
 
 						//poly
+#ifdef NTL_Threads
 						std::cout << IoStream::lock;
 						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
 						std::cout << IoStream::unlock;
-
+#else
+						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
+#endif
 						for (u64 c = 0; c < coeffs.size(); ++c)
 							memcpy(sendBuff.data() + (k*itemTheirIdx*(simple.mMaxBinSize + 1) + c)* polyMaskBytes, (u8*)&coeffs[c], polyMaskBytes);
 
@@ -159,8 +162,10 @@ namespace osuCrypto
 							, &Ss[binIdx][itemTheirIdx]
 							, (u8*)&recvEncoding[k*theirMaxBinSize + itemTheirIdx], sizeof(block));
 					
+#ifdef DEBUG
 						if (binIdx == 1 && itemTheirIdx == 1)
 							std::cout << IoStream::lock << "recvEncoding " << recvEncoding[k*theirMaxBinSize + itemTheirIdx] << std::endl << IoStream::unlock;
+#endif
 					}
 				}
 

@@ -48,8 +48,7 @@ namespace osuCrypto
 		simple.init(inputs.size(),false);
 		simple.insertItems(inputs, numThreads);
 		//simple.print();
-		std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins
-			<< std::endl << IoStream::unlock;
+		//std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins<< std::endl << IoStream::unlock;
 
 		u64 theirMaxBinSize = simple.mMaxBinSize + 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*simple.mMaxBinSize;
@@ -78,11 +77,9 @@ namespace osuCrypto
 		std::vector<std::array<block, 2>> sendOTMsg(numOTs);
 		sendIKNP.send(sendOTMsg, mPrng, chls[0]);
 
-		std::cout << IoStream::lock << sendOTMsg[0][0] <<"\t" << sendOTMsg[0][1] << std::endl << IoStream::unlock;
-		std::cout << IoStream::lock << "recvOprf.init done" << std::endl << IoStream::unlock;
 
 		//poly
-		u64 polyMaskBytes = 128 / 8;// (mPsiSecParam + log2(theirMaxBinSize + 1) + 7) / 8;
+		u64 polyMaskBytes = (mPsiSecParam + log2(theirMaxBinSize + 1) + 7) / 8;
 
 
 		auto routine = [&](u64 t)
@@ -130,11 +127,15 @@ namespace osuCrypto
 					throw std::runtime_error(LOCATION);
 				}
 
+#ifdef NTL_Threads
 				std::cout << IoStream::lock;
 				polyNTL poly;
 				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
 				std::cout << IoStream::unlock;
-
+#else
+				polyNTL poly;
+				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+#endif
 				std::vector<block> coeffs(theirMaxBinSize+1);
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -146,36 +147,24 @@ namespace osuCrypto
 
 						for (u64 c = 0; c < coeffs.size(); ++c)
 							memcpy((u8*)&coeffs[c], recvBuff.data() + (k*itemIdx*(theirMaxBinSize + 1) + c)* polyMaskBytes, polyMaskBytes);
-							
+				
+#ifdef NTL_Threads
 						std::cout << IoStream::lock;
 						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
 						std::cout << IoStream::unlock;
+#else
+						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
 
+#endif
+
+#ifdef DEBUG
 						if (binIdx == 1 && itemIdx == 1)
 						{
 							std::cout << IoStream::lock << "mBins[1].items[1] " << simple.mBins[binIdx].items[itemIdx] << std::endl << IoStream::unlock;
 							std::cout << IoStream::lock << "Sr[1] " << Sr[binIdx][itemIdx] << std::endl << IoStream::unlock;
-
 						}
-						//std::cout << IoStream::lock << "s " << binIdx << "\t"  << itemIdx << std::endl << IoStream::unlock;
-
+#endif
 					}
-
-					//compute P(default) using same recvEnc
-					/*for (u64 itemIdx = simple.mBins[binIdx].mBinRealSizes; itemIdx < simple.mMaxBinSize; ++itemIdx)
-					{
-						Sr[binIdx][itemIdx] = Sr[binIdx][simple.mBins[binIdx].mBinRealSizes - 1];
-					}*/
-
-
-					/*if (binIdx == 1)
-					{
-						for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
-						std::cout << IoStream::lock << "Sr[1].items[" << itemIdx << "] "
-							<< "\t " << Sr[binIdx][itemIdx] << std::endl << IoStream::unlock;
-
-					}*/
-
 			}
 #endif
 
@@ -193,12 +182,10 @@ namespace osuCrypto
 					{
 						sendOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
 							, &Sr[binIdx][itemIdx], (u8*)&sendEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
-					
+#ifdef DEBUG
 						if (binIdx == 1 && itemIdx == 1)
-						{
 							std::cout << IoStream::lock << "sendEncoding " << sendEncoding[k*simple.mMaxBinSize + itemIdx] << std::endl << IoStream::unlock;
-
-						}
+#endif
 					}
 				}
 
@@ -234,9 +221,7 @@ namespace osuCrypto
 					{
 						u8 isOtMsgSwap;
 						memcpy((u8*)&isOtMsgSwap, recvBuff.data() + (k*simple.mMaxBinSize + itemIdx), sizeof(u8));
-					
-						if (binIdx == 1 && itemIdx == 1)
-							std::cout << IoStream::lock << "isOtMsgSwap: "  << unsigned(isOtMsgSwap) << std::endl << IoStream::unlock;
+
 
 						//
 						if(itemIdx<simple.mBins[binIdx].mBinRealSizes)
@@ -246,12 +231,15 @@ namespace osuCrypto
 
 						memcpy(sendBuff.data() + (k*simple.mMaxBinSize + itemIdx)* maskOTlength, (u8*)&maskItem, maskOTlength);
 
-					
+#ifdef DEBUG					
+						if (binIdx == 1 && itemIdx == 1)
+							std::cout << IoStream::lock << "isOtMsgSwap: " << unsigned(isOtMsgSwap) << std::endl << IoStream::unlock;
+
 						if (binIdx == 1 && itemIdx == 1 ||
 							binIdx == 3 && itemIdx == 23 ||
 							binIdx == 4 && itemIdx == 19)
 							std::cout << IoStream::lock << simple.mBins[binIdx].items[itemIdx]  <<" inter"<<std::endl << IoStream::unlock;
-
+#endif
 					}
 				}
 				chl.asyncSend(std::move(sendBuff)); //done with sending choice OT
