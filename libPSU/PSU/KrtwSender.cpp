@@ -43,9 +43,7 @@ namespace osuCrypto
 	void KrtwSender::output(span<block> inputs, span<Channel> chls)
 	{
 		
-
 		u64 numThreads(chls.size());
-		
 		SimpleIndex simple;
 		simple.init(inputs.size(),false);
 		simple.insertItems(inputs, numThreads);
@@ -53,12 +51,8 @@ namespace osuCrypto
 		std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins
 			<< std::endl << IoStream::unlock;
 
-
-
-
 		u64 theirMaxBinSize = simple.mMaxBinSize + 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*simple.mMaxBinSize;
-		
 	
 		std::vector<std::vector<block>> Sr(simple.mNumBins);
 		for (u64 i = 0; i < simple.mNumBins; i++)
@@ -71,20 +65,20 @@ namespace osuCrypto
 		BitVector baseChoices(128);
 		std::vector<block> baseRecv(128);
 
-		for (u64 i = 0; i < baseRecv.size(); i++)
+		baseChoices.copy(mBaseChoice, 0, 128);
+		baseRecv.assign(mBaseOTRecv.begin(), mBaseOTRecv.begin() + 128);
+
+		/*for (u64 i = 0; i < baseRecv.size(); i++)
 		{
 			baseChoices[i] = mBaseChoice[i];
 			baseRecv[i] = mBaseOTRecv[i];
-		}
+		}*/
 
 		sendIKNP.setBaseOts(baseRecv, baseChoices);
 		std::vector<std::array<block, 2>> sendOTMsg(numOTs);
 		sendIKNP.send(sendOTMsg, mPrng, chls[0]);
 
 		std::cout << IoStream::lock << sendOTMsg[0][0] <<"\t" << sendOTMsg[0][1] << std::endl << IoStream::unlock;
-
-
-
 		std::cout << IoStream::lock << "recvOprf.init done" << std::endl << IoStream::unlock;
 
 		//poly

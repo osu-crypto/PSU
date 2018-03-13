@@ -3,6 +3,9 @@
 //using namespace std;
 #include "tests_cryptoTools/UnitTests.h"
 #include "libOTe_Tests/UnitTests.h"
+#include <cryptoTools/gsl/span>
+
+#include <cryptoTools/Common/Matrix.h>
 
 #include <cryptoTools/Common/Defines.h>
 using namespace osuCrypto;
@@ -71,74 +74,75 @@ using namespace osuCrypto;
 #include <thread>
 #include <vector>
 
-
-void Sender()
+void Sender(u64 setSize, span<block> inputs, u64 numThreads = 1)
 {
-	u64 setSize = 1 << 7, psiSecParam = 40, numThreads(1);
+	u64 psiSecParam = 40;
 
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
+	// set up networking
+	std::string name = "n";
+	IOService ios;
+	Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
 
-	std::vector<block> sendSet(setSize), recvSet(setSize);
-	for (u64 i = 0; i < setSize; ++i)
-	{
-		sendSet[i] = prng0.get<block>();
-		recvSet[i] = prng0.get<block>();
-	}
-	sendSet[0] = recvSet[0];
-	sendSet[2] = recvSet[2];
-	std::cout << "intersection: " << sendSet[0] << "\n";
-	std::cout << "intersection: " << sendSet[2] << "\n";
+	std::vector<Channel> sendChls(numThreads);
+	for (u64 i = 0; i < numThreads; ++i)
+		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
 
+	KrtwSender sender;
+
+	sender.init(40, prng0, inputs, sendChls);
+
+	/*std::cout << sender.mBaseOTSend[0][0] << "\t";
+	std::cout << sender.mBaseOTSend[0][1] << "\n";
+	std::cout << sender.mBaseOTRecv[0] << "\n";*/
+
+	sender.output(inputs, sendChls);
+
+
+	for (u64 i = 0; i < numThreads; ++i)
+		sendChls[i].close();
+
+	ep1.stop();	ios.stop();
+
+}
+
+void Receiver(u64 setSize, span<block> inputs,u64 numThreads=1)
+{
+	u64 psiSecParam = 40;
+
+	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+	PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
 
 	// set up networking
 	std::string name = "n";
 	IOService ios;
 	Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
-	Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
 
 	std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
 	for (u64 i = 0; i < numThreads; ++i)
-	{
-		sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
 		recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
-	}
 
-
-	KrtwSender sender;
 	KrtwReceiver recv;
-	auto thrd = std::thread([&]() {
-		recv.init(40, prng1, recvSet, recvChls);
+	gTimer.reset();
+	gTimer.setTimePoint("start");
+	recv.init(40, prng1, inputs, recvChls);
+	gTimer.setTimePoint("offline");
 
-		std::cout << recv.mBaseOTRecv[0] << "\n";
-
+		/*std::cout << recv.mBaseOTRecv[0] << "\n";
 		std::cout << recv.mBaseOTSend[0][0] << "\t";
-		std::cout << recv.mBaseOTSend[0][1] << "\n";
+		std::cout << recv.mBaseOTSend[0][1] << "\n";*/
 
-		recv.output(recvSet, recvChls);
-
-	});
-
-	sender.init(40, prng0, sendSet, sendChls);
-
-
-	std::cout << sender.mBaseOTSend[0][0] << "\t";
-	std::cout << sender.mBaseOTSend[0][1] << "\n";
-	std::cout << sender.mBaseOTRecv[0] << "\n";
-
-	sender.output(sendSet, sendChls);
-	thrd.join();
-
-
+	recv.output(inputs, recvChls);
+	gTimer.setTimePoint("finish");
+	std::cout << gTimer << std::endl;
 
 
 	for (u64 i = 0; i < numThreads; ++i)
-	{
-		sendChls[i].close(); recvChls[i].close();
-	}
+		recvChls[i].close();
 
-	ep0.stop(); ep1.stop();	ios.stop();
+	ep0.stop(); ios.stop();
 
 }
 
@@ -213,18 +217,68 @@ void PMT_Test_Impl()
 }
 
 
-#include <cryptoTools/gsl/span>
 
-#include <cryptoTools/Common/Matrix.h>
+
+void usage(const char* argv0)
+{
+	std::cout << "Error! Please use:" << std::endl;
+	std::cout << "\t 1. For unit test: " << argv0 << " -t" << std::endl;
+	std::cout << "\t 2. For simulation (2 terminal): " << std::endl;;
+	std::cout << "\t\t Sender terminal: " << argv0 << " -r 0" << std::endl;
+	std::cout << "\t\t Receiver terminal: " << argv0 << " -r 1" << std::endl;
+}
 
 int main(int argc, char** argv)
 {
-
+	u64 setSize = 1 << 20;
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	PRNG prng1(_mm_set_epi32(4253233465, 334565, 0, 235));
+	std::vector<block> sendSet(setSize), recvSet(setSize);
+	for (u64 i = 0; i < setSize; ++i)
+	{
+		sendSet[i] = prng0.get<block>();
+		recvSet[i] = prng0.get<block>();
+	}
+	sendSet[0] = recvSet[0];
+	sendSet[2] = recvSet[2];
+	std::cout << "intersection: " << sendSet[0] << "\n";
+	std::cout << "intersection: " << sendSet[2] << "\n";
+	
+
+#if 0
+	std::thread thrd = std::thread([&]() {
+		Sender(setSize, sendSet);
+	});
+
+	Receiver(setSize, recvSet);
+
+	thrd.join();
+	return 0;
+#endif
+
+	if (argc == 2 && argv[1][0] == '-' && argv[1][1] == 't') {
+		
+		std::thread thrd = std::thread([&]() {
+			Sender(setSize,sendSet);
+		});
+
+		Receiver(setSize, recvSet);
+
+		thrd.join();
+
+	}
+	else if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
+		Sender(setSize, sendSet);
+	}
+	else if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
+		Receiver(setSize, sendSet);
+	}
+	else {
+		usage(argv[0]);
+	}
 
 
-	PMT_Test_Impl();
+	
   
 	return 0;
 }

@@ -35,18 +35,10 @@ namespace osuCrypto
 		recvOprf.setBaseOts(mBaseOTSend);
 
 		
-		
-		
 
 	}
 	void KrtwReceiver::output(span<block> inputs, span<Channel> chls)
 	{
-
-		PsuOutput.resize(inputs.size());
-		for (u64 i = 0; i < PsuOutput.size(); i++)
-			PsuOutput[i] = inputs[i];
-
-
 		u64 numThreads(chls.size());
 		const bool isMultiThreaded = numThreads > 1;
 
@@ -57,9 +49,7 @@ namespace osuCrypto
 		simple.insertItems(inputs, numThreads);
 		//simple.print();
 
-		std::cout << IoStream::lock << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins
-			<< std::endl << IoStream::unlock;
-
+		std::cout << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins<< std::endl ;
 
 		u64 theirMaxBinSize = simple.mMaxBinSize - 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*(theirMaxBinSize);
@@ -83,6 +73,7 @@ namespace osuCrypto
 		
 		IknpOtExtReceiver recvIKNP;
 		std::vector<std::array<block, 2>> baseOTSend(128);
+
 		for (u64 i = 0; i < baseOTSend.size(); i++)
 		{
 			baseOTSend[i][0] = mBaseOTSend[i][0];
@@ -150,19 +141,7 @@ namespace osuCrypto
 							memcpy(sendBuff.data() + (k*itemTheirIdx*(simple.mMaxBinSize + 1) + c)* polyMaskBytes, (u8*)&coeffs[c], polyMaskBytes);
 
 						//std::cout << IoStream::lock <<"r "<< binIdx << "\t" << itemTheirIdx << std::endl << IoStream::unlock;
-
-						
 					}
-
-				
-					/*if (binIdx == 1)
-					{
-						for (u64 itemTheirIdx = 0; itemTheirIdx < theirMaxBinSize; ++itemTheirIdx)
-							std::cout << IoStream::lock << "Ss[1].items[" << itemTheirIdx << "] "
-							<< "\t " << Ss[binIdx][itemTheirIdx] << std::endl << IoStream::unlock;
-
-					}*/
-				
 				}
 				chl.asyncSend(std::move(sendBuff)); //done with sending P(x)
 
