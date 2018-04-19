@@ -24,7 +24,7 @@ namespace tests_libOTe
 		TEST_METHOD(PMT_TestVS)
 		{
 			InitDebugPrinting();
-			PMT_Test_Impl();
+			PSU_Test_Impl();
 		}
 
 		TEST_METHOD(HashingParameters_CalcVS)

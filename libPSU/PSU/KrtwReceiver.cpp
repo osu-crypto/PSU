@@ -97,15 +97,9 @@ namespace osuCrypto
 			u64 tempBinEndIdx = (simple.mNumBins * (t + 1) / numThreads);
 			u64 binEndIdx = std::min(tempBinEndIdx, simple.mNumBins);
 			
-#ifdef NTL_Threads
-			std::cout << IoStream::lock;
+
 			polyNTL poly;
 			poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
-			std::cout << IoStream::unlock;
-#else
-			polyNTL poly;
-			poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
-#endif
 
 			for (u64 i = binStartIdx; i < binEndIdx; i += stepSize)
 			{
@@ -133,13 +127,9 @@ namespace osuCrypto
 						sendEncoding.emplace_back(mPrng.get<block>());
 
 						//poly
-#ifdef NTL_Threads
-						std::cout << IoStream::lock;
+
 						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
-						std::cout << IoStream::unlock;
-#else
-						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
-#endif
+
 						for (u64 c = 0; c < coeffs.size(); ++c)
 							memcpy(sendBuff.data() + (k*itemTheirIdx*(simple.mMaxBinSize + 1) + c)* polyMaskBytes, (u8*)&coeffs[c], polyMaskBytes);
 

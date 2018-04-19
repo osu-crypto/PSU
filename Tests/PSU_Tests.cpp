@@ -529,7 +529,7 @@ namespace tests_libOTe
 	}
 
 
-	void PMT_Test_Impl()
+	void PSU_Test_Impl()
 	{
 		setThreadName("Sender");
 		u64 setSize = 1 << 7, psiSecParam = 40, numThreads(1);
@@ -567,24 +567,12 @@ namespace tests_libOTe
 		KrtwSender sender;
 		KrtwReceiver recv;
 		auto thrd = std::thread([&]() {
-			recv.init(40, prng1, recvSet, recvChls);
-
-			std::cout << recv.mBaseOTRecv[0] << "\n";
-
-			std::cout << recv.mBaseOTSend[0][0] << "\t";
-			std::cout << recv.mBaseOTSend[0][1] << "\n";
-			
+			recv.init(40, prng1, recvSet, recvChls);					
 			recv.output(recvSet, recvChls);
 
 		});
 
 		sender.init(40, prng0, sendSet, sendChls);
-		
-
-		std::cout << sender.mBaseOTSend[0][0] << "\t";
-		std::cout << sender.mBaseOTSend[0][1] << "\n";
-		std::cout << sender.mBaseOTRecv[0] << "\n";
-
 		sender.output(sendSet, sendChls);
 		thrd.join();
 

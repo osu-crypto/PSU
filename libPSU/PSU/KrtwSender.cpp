@@ -127,15 +127,10 @@ namespace osuCrypto
 					throw std::runtime_error(LOCATION);
 				}
 
-#ifdef NTL_Threads
-				std::cout << IoStream::lock;
+
 				polyNTL poly;
 				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
-				std::cout << IoStream::unlock;
-#else
-				polyNTL poly;
-				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
-#endif
+		
 				std::vector<block> coeffs(theirMaxBinSize+1);
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -148,14 +143,8 @@ namespace osuCrypto
 						for (u64 c = 0; c < coeffs.size(); ++c)
 							memcpy((u8*)&coeffs[c], recvBuff.data() + (k*itemIdx*(theirMaxBinSize + 1) + c)* polyMaskBytes, polyMaskBytes);
 				
-#ifdef NTL_Threads
-						std::cout << IoStream::lock;
-						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
-						std::cout << IoStream::unlock;
-#else
-						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
 
-#endif
+						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
 
 #ifdef DEBUG
 						if (binIdx == 1 && itemIdx == 1)

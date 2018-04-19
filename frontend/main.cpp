@@ -146,7 +146,7 @@ void Receiver(u64 setSize, span<block> inputs,u64 numThreads=1)
 
 }
 
-void PMT_Test_Impl()
+void PSU_Test_Impl()
 {
 	u64 setSize = 1 << 7, psiSecParam = 40, numThreads(1);
 
