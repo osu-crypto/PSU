@@ -21,7 +21,7 @@ namespace tests_libOTe
         }
 		 
 
-		TEST_METHOD(PMT_TestVS)
+		TEST_METHOD(PSU_TestVS)
 		{
 			InitDebugPrinting();
 			PSU_Test_Impl();

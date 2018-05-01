@@ -62,6 +62,14 @@ include_directories("${Miracl_Dirs}")
 set(NTL_Dirs "${CMAKE_SOURCE_DIR}/thirdparty/linux/ntl/")
 include_directories("${NTL_Dirs}/include/")
 
+# default location for GMP
+set(GMP_Dirs "${CMAKE_SOURCE_DIR}/thirdparty/linux/gmp/")
+include_directories("${GMP_Dirs}/include/")
+
+# default location for GF2X
+set(GF2X_Dirs "${CMAKE_SOURCE_DIR}/thirdparty/linux/gf2x/")
+include_directories("${GMP_Dirs}/include/")
+
 # default location for Boost
 set(BOOST_ROOT "${libOTe_Dirs}/cryptoTools/thirdparty/linux/boost/")
 

@@ -42,6 +42,8 @@ namespace osuCrypto
 		u64 numThreads(chls.size());
 		const bool isMultiThreaded = numThreads > 1;
 
+	//	std::cout << "Receiver: numThreads" << numThreads << "\n";
+
 		std::mutex mtx;
 
 		SimpleIndex simple;
@@ -64,9 +66,10 @@ namespace osuCrypto
 				Ss[i][j] = mPrng.get<block>();
 		}
 
+#ifdef DEBUG
 		std::cout << IoStream::lock << "mBins[1].items[1]  " << simple.mBins[1].items[1] << std::endl << IoStream::unlock;
 		std::cout << IoStream::lock << "Ss[1] " << Ss[1][1]<< std::endl << IoStream::unlock;
-
+#endif
 		sendOprf.init(numOTs, mPrng, chls[0]);
 		recvOprf.init(numOTs, mPrng, chls[0]);//PEQT
 	
@@ -85,8 +88,9 @@ namespace osuCrypto
 		std::vector<block> recvOTMsg(numOTs);
 		recvIKNP.receive(choicesOT, recvOTMsg, mPrng, chls[0]);
 
+#ifdef DEBUG
 		std::cout << IoStream::lock << recvOTMsg[0] << std::endl << IoStream::unlock;
-
+#endif
 		//poly
 		u64 polyMaskBytes = (mPsiSecParam + log2(simple.mMaxBinSize + 1) + 7) / 8;
 
@@ -97,18 +101,26 @@ namespace osuCrypto
 			u64 tempBinEndIdx = (simple.mNumBins * (t + 1) / numThreads);
 			u64 binEndIdx = std::min(tempBinEndIdx, simple.mNumBins);
 			
-
+#ifdef _MSC_VER
+			std::cout << IoStream::lock;
 			polyNTL poly;
 			poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+			std::cout << IoStream::unlock;
+#else
+			polyNTL poly;
+			poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+#endif
+
 
 			for (u64 i = binStartIdx; i < binEndIdx; i += stepSize)
 			{
 				auto curStepSize = std::min(stepSize, binEndIdx - i);
 
-				sendOprf.recvCorrection(chl, curStepSize*theirMaxBinSize);
+				sendOprf.recvCorrection(chl, curStepSize*theirMaxBinSize); //OPRF
 
 				std::vector<u8> sendBuff(curStepSize*theirMaxBinSize*(simple.mMaxBinSize + 1)*polyMaskBytes);
 
+				//==========================PMT==========================
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
 					u64 binIdx = i + k;
@@ -127,8 +139,15 @@ namespace osuCrypto
 						sendEncoding.emplace_back(mPrng.get<block>());
 
 						//poly
-
+#ifdef _MSC_VER
+						std::cout << IoStream::lock;
 						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
+						std::cout << IoStream::unlock;
+#else 
+						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
+
+#endif
+
 
 						for (u64 c = 0; c < coeffs.size(); ++c)
 							memcpy(sendBuff.data() + (k*itemTheirIdx*(simple.mMaxBinSize + 1) + c)* polyMaskBytes, (u8*)&coeffs[c], polyMaskBytes);
@@ -137,9 +156,10 @@ namespace osuCrypto
 					}
 				}
 				chl.asyncSend(std::move(sendBuff)); //done with sending P(x)
+				//gTimer.setTimePoint("r sending coeffs");
 
-#if 1 //PEQT
 
+				//==========================PEQT==========================
 				std::vector<block> recvEncoding(curStepSize*theirMaxBinSize);
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -161,9 +181,11 @@ namespace osuCrypto
 
 				recvOprf.sendCorrection(chl, curStepSize*theirMaxBinSize);
 
+
+
 				u64 maskPEQTlength = mPsiSecParam / 8;
 				std::vector<u8> recvBuff;
-				chl.recv(recvBuff);
+				chl.recv(recvBuff); //receive OPRF(s*)
 				if (recvBuff.size() != curStepSize*theirMaxBinSize*maskPEQTlength)
 				{
 					std::cout << "error @ " << (LOCATION) << std::endl;
@@ -180,10 +202,12 @@ namespace osuCrypto
 						block rcv;
 						memcpy((u8*)&rcv, recvBuff.data() + (k*theirMaxBinSize + itemTheirIdx)* maskPEQTlength, maskPEQTlength);
 						
+#ifdef DEBUG
 						if (binIdx == 1 && itemTheirIdx == 1)
 							std::cout << IoStream::lock << "rcv " << rcv << std::endl << IoStream::unlock;
 
-						if (!memcmp(&rcv, &recvEncoding[k*theirMaxBinSize + itemTheirIdx], maskPEQTlength))
+#endif
+						if (!memcmp(&rcv, &recvEncoding[k*theirMaxBinSize + itemTheirIdx], maskPEQTlength))  //get bit from PMT
 						{
 							bitPSU[k*theirMaxBinSize + itemTheirIdx] = 1;
 							//std::cout << binIdx << "\t" << itemTheirIdx << "\t" << std::endl;
@@ -191,9 +215,11 @@ namespace osuCrypto
 
 					}
 				}
+				//gTimer.setTimePoint("r PMT output");
 
-#endif
 
+
+				//==========================Rabin OT==========================
 				sendBuff.resize(curStepSize*theirMaxBinSize*sizeof(u8));
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -205,19 +231,24 @@ namespace osuCrypto
 							memcpy(sendBuff.data() + (k*theirMaxBinSize+ itemTheirIdx)
 							, (u8*)&isOtMsgSwap, sizeof(u8));
 					
+#ifdef DEBUG
 							if (binIdx == 1 && itemTheirIdx == 1)
 								std::cout << IoStream::lock << bitPSU[k*theirMaxBinSize + itemTheirIdx] 
 											<< "\t "<< choicesOT[binIdx*theirMaxBinSize + itemTheirIdx]
 											<<"\t" <<unsigned(isOtMsgSwap)<< std::endl << IoStream::unlock;
 
-					
+#endif
 					}
 				}
 
-
-
 				chl.asyncSend(std::move(sendBuff)); //done with sending choice OT
 
+				//gTimer.setTimePoint("r Rabin OT");
+
+
+#if 1 //PEQT
+
+				//==========================compute PSU==========================
 
 				u64 maskOTlength = 128 / 8;
 				chl.recv(recvBuff);
@@ -254,7 +285,7 @@ namespace osuCrypto
 
 					}
 				}
-			
+#endif	
 
 			}
 		};

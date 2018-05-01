@@ -1,0 +1,108 @@
+/scratch/setup-network status >> output
+
+echo "======================================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 1  >> output & ./bin/frontend.exe -r 0 -n 22 -t 1 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 1  >> output & ./bin/frontend.exe -r 0 -n 22 -t 1 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 2 >> output & ./bin/frontend.exe -r 0 -n 22 -t 2 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 2 >> output & ./bin/frontend.exe -r 0 -n 22 -t 2 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 4 >> output & ./bin/frontend.exe -r 0 -n 22 -t 4 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 4 >> output & ./bin/frontend.exe -r 0 -n 22 -t 4 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 16 >> output & ./bin/frontend.exe -r 0 -n 22 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 16 >> output & ./bin/frontend.exe -r 0 -n 22 -t 16 >> output
+sleep 10
+
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 32 >> output & ./bin/frontend.exe -r 0 -n 22 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 32 >> output & ./bin/frontend.exe -r 0 -n 22 -t 32 >> output
+sleep 10
+
+echo "======================================================="  >> output
+echo "======================================================="  >> output
+
+
+./bin/frontend.exe -r 1 -n 24 -t 1  >> output & ./bin/frontend.exe -r 0 -n 24 -t 1 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 1  >> output & ./bin/frontend.exe -r 0 -n 24 -t 1 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 2 >> output & ./bin/frontend.exe -r 0 -n 24 -t 2 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 2 >> output & ./bin/frontend.exe -r 0 -n 24 -t 2 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 4 >> output & ./bin/frontend.exe -r 0 -n 24 -t 4 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 4 >> output & ./bin/frontend.exe -r 0 -n 24 -t 4 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 16 >> output & ./bin/frontend.exe -r 0 -n 24 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 16 >> output & ./bin/frontend.exe -r 0 -n 24 -t 16 >> output
+sleep 10
+
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 32 >> output & ./bin/frontend.exe -r 0 -n 24 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 24 -t 32 >> output & ./bin/frontend.exe -r 0 -n 24 -t 32 >> output
+sleep 10
+
+echo "======================================================="  >> output
+echo "======================================================="  >> output

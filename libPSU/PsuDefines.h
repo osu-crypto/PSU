@@ -1,10 +1,10 @@
 #pragma once
 #include <cryptoTools/Common/Defines.h>
 #define NTL_Threads
-#define  DEBUG
+//#define  DEBUG
 
 namespace osuCrypto
 { 
-	static const u64 stepSize(8192);
+	static const u64 stepSize(1<<8);
 
 }

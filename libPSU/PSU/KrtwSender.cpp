@@ -34,7 +34,7 @@ namespace osuCrypto
 		sendOprf.setBaseOts(mBaseOTRecv, mBaseChoice);
 
 		
-		std::cout << "baseCount "<< baseCount << std::endl;
+		//std::cout << "baseCount "<< baseCount << std::endl;
 
 		
 
@@ -94,7 +94,8 @@ namespace osuCrypto
 				auto curStepSize = std::min(stepSize, binEndIdx - i);
 				std::vector<block> recvEncoding(curStepSize*simple.mMaxBinSize);
 
-				for (u64 k = 0; k < curStepSize; ++k)
+				//==========================PMT==========================
+				for (u64 k = 0; k < curStepSize; ++k) //OPRF
 				{
 					u64 binIdx = i + k;
 					for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx)
@@ -119,18 +120,26 @@ namespace osuCrypto
 
 
 #if 1 //poly
+
 				std::vector<u8> recvBuff;
-				chl.recv(recvBuff);
+				chl.recv(recvBuff); //receive P(x)
 				if (recvBuff.size() != curStepSize*simple.mMaxBinSize*(theirMaxBinSize + 1)* polyMaskBytes)
 				{
 					std::cout << "error @ " << (LOCATION) << std::endl;
 					throw std::runtime_error(LOCATION);
 				}
 
-
+#ifdef _MSC_VER
+				std::cout << IoStream::lock;
 				polyNTL poly;
 				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
-		
+				std::cout << IoStream::unlock;
+#else
+				polyNTL poly;
+				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+#endif
+
+
 				std::vector<block> coeffs(theirMaxBinSize+1);
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -143,8 +152,15 @@ namespace osuCrypto
 						for (u64 c = 0; c < coeffs.size(); ++c)
 							memcpy((u8*)&coeffs[c], recvBuff.data() + (k*itemIdx*(theirMaxBinSize + 1) + c)* polyMaskBytes, polyMaskBytes);
 				
-
+#ifdef _MSC_VER
+						std::cout << IoStream::lock;
 						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
+						std::cout << IoStream::unlock;
+#else
+						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
+#endif // _MSC_VER
+
+					
 
 #ifdef DEBUG
 						if (binIdx == 1 && itemIdx == 1)
@@ -156,9 +172,10 @@ namespace osuCrypto
 					}
 			}
 #endif
+				//gTimer.setTimePoint("s compute s");
 
-#if 1 //PEQT
 
+				//==========================PEQT==========================
 
 				sendOprf.recvCorrection(chl, curStepSize*simple.mMaxBinSize);
 				std::vector<block> sendEncoding(curStepSize*simple.mMaxBinSize);
@@ -185,12 +202,15 @@ namespace osuCrypto
 				for (u64 c = 0; c < sendEncoding.size(); ++c)
 					memcpy(sendBuff.data() + c* maskPEQTlength, (u8*)&sendEncoding[c], maskPEQTlength);
 
-				chl.asyncSend(std::move(sendBuff)); //done with sending PEQT
+				chl.asyncSend(std::move(sendBuff)); //send OPRF(s*) == done with sending PEQT
+
+				//gTimer.setTimePoint("s sending OPRF(s*)");
 
 
-				
+#if 1 //PEQT
 
-#endif
+
+				//==========================Rabin OT==========================
 				chl.recv(recvBuff); //receive isOtMsgSwap
 				if (recvBuff.size() != curStepSize*simple.mMaxBinSize)
 				{
@@ -232,6 +252,10 @@ namespace osuCrypto
 					}
 				}
 				chl.asyncSend(std::move(sendBuff)); //done with sending choice OT
+				
+				//gTimer.setTimePoint("s Rabin OT");
+
+#endif		
 			}
 
 

@@ -74,7 +74,16 @@ using namespace osuCrypto;
 #include <thread>
 #include <vector>
 
-void Sender(u64 setSize, span<block> inputs, u64 numThreads = 1)
+template<typename ... Args>
+std::string string_format(const std::string& format, Args ... args)
+{
+	size_t size = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1; // Extra space for '\0'
+	std::unique_ptr<char[]> buf(new char[size]);
+	std::snprintf(buf.get(), size, format.c_str(), args ...);
+	return std::string(buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
+}
+
+void Sender(u64 setSize, span<block> inputs, u64 numThreads)
 {
 	u64 psiSecParam = 40;
 
@@ -92,13 +101,17 @@ void Sender(u64 setSize, span<block> inputs, u64 numThreads = 1)
 
 	KrtwSender sender;
 
+	gTimer.reset();
+	gTimer.setTimePoint("s start");
 	sender.init(40, prng0, inputs, sendChls);
+	gTimer.setTimePoint("s offline");
 
 	/*std::cout << sender.mBaseOTSend[0][0] << "\t";
 	std::cout << sender.mBaseOTSend[0][1] << "\n";
 	std::cout << sender.mBaseOTRecv[0] << "\n";*/
 
 	sender.output(inputs, sendChls);
+	gTimer.setTimePoint("s finish");
 
 
 	for (u64 i = 0; i < numThreads; ++i)
@@ -108,7 +121,7 @@ void Sender(u64 setSize, span<block> inputs, u64 numThreads = 1)
 
 }
 
-void Receiver(u64 setSize, span<block> inputs,u64 numThreads=1)
+void Receiver(u64 setSize, span<block> inputs,u64 numThreads)
 {
 	u64 psiSecParam = 40;
 
@@ -126,17 +139,29 @@ void Receiver(u64 setSize, span<block> inputs,u64 numThreads=1)
 
 	KrtwReceiver recv;
 	gTimer.reset();
-	gTimer.setTimePoint("start");
+	gTimer.setTimePoint("r start");
 	recv.init(40, prng1, inputs, recvChls);
-	gTimer.setTimePoint("offline");
+	gTimer.setTimePoint("r offline");
 
 		/*std::cout << recv.mBaseOTRecv[0] << "\n";
 		std::cout << recv.mBaseOTSend[0][0] << "\t";
 		std::cout << recv.mBaseOTSend[0][1] << "\n";*/
 
 	recv.output(inputs, recvChls);
-	gTimer.setTimePoint("finish");
+	gTimer.setTimePoint("r finish");
 	std::cout << gTimer << std::endl;
+
+
+
+	u64 dataSent = 0, dataRecv(0);
+	for (u64 g = 0; g < recvChls.size(); ++g)
+	{
+		dataSent += recvChls[g].getTotalDataSent();
+		dataRecv += recvChls[g].getTotalDataRecv();
+		recvChls[g].resetStats();
+	}
+
+	std::cout << "      Total Comm = " << string_format("%5.2f", (dataRecv + dataSent) / std::pow(2.0, 20)) << " MB\n";
 
 
 	for (u64 i = 0; i < numThreads; ++i)
@@ -230,9 +255,21 @@ void usage(const char* argv0)
 
 int main(int argc, char** argv)
 {
-	u64 setSize = 1 << 20;
+	u64 setSize = 1 << 16, numThreads = 2;
+
+
+	if (argv[3][0] == '-' && argv[3][1] == 'n'
+		&& argv[5][0] == '-' && argv[5][1] == 't')
+	{
+		setSize = 1 << atoi(argv[4]);
+		numThreads = atoi(argv[6]);
+	}
+
+	std::cout << "SetSize: " << setSize << " vs " << setSize << "   |  numThreads: " << numThreads << "\t";
+
 	PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 	PRNG prng1(_mm_set_epi32(4253233465, 334565, 0, 235));
+
 	std::vector<block> sendSet(setSize), recvSet(setSize);
 	for (u64 i = 0; i < setSize; ++i)
 	{
@@ -241,37 +278,37 @@ int main(int argc, char** argv)
 	}
 	sendSet[0] = recvSet[0];
 	sendSet[2] = recvSet[2];
-	std::cout << "intersection: " << sendSet[0] << "\n";
-	std::cout << "intersection: " << sendSet[2] << "\n";
+	/*std::cout << "intersection: " << sendSet[0] << "\n";
+	std::cout << "intersection: " << sendSet[2] << "\n";*/
 	
 
 #if 0
 	std::thread thrd = std::thread([&]() {
-		Sender(setSize, sendSet);
+		Sender(setSize, sendSet, numThreads);
 	});
 
-	Receiver(setSize, recvSet);
+	Receiver(setSize, recvSet, numThreads);
 
 	thrd.join();
 	return 0;
 #endif
 
-	if (argc == 2 && argv[1][0] == '-' && argv[1][1] == 't') {
+	if (argv[1][0] == '-' && argv[1][1] == 't') {
 		
 		std::thread thrd = std::thread([&]() {
-			Sender(setSize,sendSet);
+			Sender(setSize,sendSet, numThreads);
 		});
 
-		Receiver(setSize, recvSet);
+		Receiver(setSize, recvSet, numThreads);
 
 		thrd.join();
 
 	}
-	else if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
-		Sender(setSize, sendSet);
+	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
+		Sender(setSize, sendSet, numThreads);
 	}
-	else if (argc == 3 && argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
-		Receiver(setSize, sendSet);
+	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
+		Receiver(setSize, sendSet, numThreads);
 	}
 	else {
 		usage(argv[0]);
