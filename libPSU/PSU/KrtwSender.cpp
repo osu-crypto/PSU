@@ -46,7 +46,6 @@ namespace osuCrypto
 		u64 numThreads(chls.size());
 		SimpleIndex simple;
 		simple.init(inputs.size(),false);
-		simple.insertItems(inputs, numThreads);
 		//simple.print();
 		//std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins<< std::endl << IoStream::unlock;
 
@@ -77,9 +76,9 @@ namespace osuCrypto
 		std::vector<std::array<block, 2>> sendOTMsg(numOTs);
 		sendIKNP.send(sendOTMsg, mPrng, chls[0]);
 
-
+		simple.insertItems(inputs, numThreads);
 		//poly
-		u64 polyMaskBytes = (mPsiSecParam + log2(theirMaxBinSize + 1) + 7) / 8;
+		u64 polyMaskBytes = (mPsiSecParam + log2(pow(theirMaxBinSize+1,2)*simple.mNumBins) + 7) / 8;
 
 
 		auto routine = [&](u64 t)

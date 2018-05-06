@@ -48,7 +48,6 @@ namespace osuCrypto
 
 		SimpleIndex simple;
 		simple.init(inputs.size(),true);
-		simple.insertItems(inputs, numThreads);
 		//simple.print();
 
 		//std::cout << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins<< std::endl ;
@@ -88,11 +87,16 @@ namespace osuCrypto
 		std::vector<block> recvOTMsg(numOTs);
 		recvIKNP.receive(choicesOT, recvOTMsg, mPrng, chls[0]);
 
+		gTimer.setTimePoint("r offline");
+
+		simple.insertItems(inputs, numThreads);
+
+
 #ifdef DEBUG
 		std::cout << IoStream::lock << recvOTMsg[0] << std::endl << IoStream::unlock;
 #endif
 		//poly
-		u64 polyMaskBytes = (mPsiSecParam + log2(simple.mMaxBinSize + 1) + 7) / 8;
+		u64 polyMaskBytes = (mPsiSecParam + log2(pow(simple.mMaxBinSize + 1,2)*simple.mNumBins) + 7) / 8;
 
 		auto routine = [&](u64 t)
 		{
@@ -128,23 +132,23 @@ namespace osuCrypto
 					for (u64 itemTheirIdx = 0; itemTheirIdx < theirMaxBinSize; ++itemTheirIdx)
 					{
 
-						std::vector<block> setY(simple.mBins[binIdx].mBinRealSizes, Ss[binIdx][itemTheirIdx]);
-						std::vector<block>sendEncoding(setY.size());
+						//std::vector<block> setY(simple.mBins[binIdx].mBinRealSizes, Ss[binIdx][itemTheirIdx]);
+						std::vector<block>sendEncoding(simple.mBins[binIdx].mBinRealSizes);
 
 						for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx) //compute many F(k,xi)
 							sendOprf.encode(binIdx*theirMaxBinSize + itemTheirIdx
 								, &simple.mBins[binIdx].items[itemIdx], (u8*)&sendEncoding[itemIdx], sizeof(block));
 
-						setY.emplace_back(mPrng.get<block>()); //add randome point
-						sendEncoding.emplace_back(mPrng.get<block>());
+						//setY.emplace_back(mPrng.get<block>()); //add randome point
+						//sendEncoding.emplace_back(mPrng.get<block>());
 
 						//poly
 #ifdef _MSC_VER
 						std::cout << IoStream::lock;
-						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
+						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, Ss[binIdx][itemTheirIdx], coeffs);
 						std::cout << IoStream::unlock;
 #else 
-						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, setY, coeffs);
+						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, Ss[binIdx][itemTheirIdx], coeffs);
 
 #endif
 

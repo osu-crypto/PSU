@@ -665,42 +665,41 @@ namespace tests_libOTe
 	void NTL_Poly_Test_Impl() {
 		std::mutex mtx;
 
-		auto routines = [&](u64 t)
-		{
+		/*auto routines = [&](u64 t)
+		{*/
 			
 			polyNTL poly;
-			poly.NtlPolyInit(128/8);
+			poly.NtlPolyInit(64/8);
 			PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 
 			std::vector<block> setX(10);
 			std::vector<block> setY(10, prng0.get<block>());
 
 			block a= prng0.get<block>();
-			for (u64 i = 0; i < 4; ++i)
+			for (u64 i = 0; i < 10; ++i)
 			{
 				setX[i] = prng0.get<block>();
 			}
 
-			block b = prng0.get<block>();
-			for (u64 i = 5; i < setX.size(); ++i)
-			{
-				setX[i] = OneBlock;
-			}
-
-			setY[9] = prng0.get<block>();
-
+			block y = prng0.get<block>();
+		
 
 
 			std::vector<block> coeffs;
-			poly.getBlkCoefficients(11,setX, setY, coeffs);
+			poly.getBlkCoefficients(20,setX, y, coeffs);
 
-			block y=ZeroBlock;
-			poly.evalPolynomial(coeffs, setX[0],y);
+			block y1=ZeroBlock;
 			
-			std::lock_guard<std::mutex> lock(mtx);
-			std::cout << setY[0] << "\t" << y << std::endl;
+			
+			for (u64 i = 0; i < 10; ++i)
+			{
+				poly.evalPolynomial(coeffs, setX[i], y1);
+				if(memcmp((u8*)&y1, (u8*)&y,64/8))
+					std::cout << y << "\t" << y1 << std::endl;
 
-		};
+			}
+
+		/*};
 
 		std::vector<std::thread> thrds(1);
 		for (u64 i = 0; i < thrds.size(); ++i)
@@ -711,7 +710,7 @@ namespace tests_libOTe
 		}
 
 		for (auto& thrd : thrds)
-			thrd.join();
+			thrd.join();*/
 	}
 
 	void myTest() {

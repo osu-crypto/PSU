@@ -141,7 +141,6 @@ void Receiver(u64 setSize, span<block> inputs,u64 numThreads)
 	gTimer.reset();
 	gTimer.setTimePoint("r start");
 	recv.init(40, prng1, inputs, recvChls);
-	gTimer.setTimePoint("r offline");
 
 		/*std::cout << recv.mBaseOTRecv[0] << "\n";
 		std::cout << recv.mBaseOTSend[0][0] << "\t";

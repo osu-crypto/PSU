@@ -37,6 +37,8 @@ public:
 	void getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs);
 	void evalPolynomial(std::vector<block>& coeffs, block& x, block& y);
 
+	void getBlkCoefficients(u64 degree, std::vector<block>& setX, block& y, std::vector<block>& coeffs); //same y
+
 };
 
 }

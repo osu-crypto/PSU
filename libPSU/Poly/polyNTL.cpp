@@ -51,6 +51,44 @@ namespace osuCrypto
 		}
 	}
 
+	void polyNTL::getBlkCoefficients(u64 degree, std::vector<block>& setX, block& y, std::vector<block>& coeffs)
+	{
+		//degree = setX.size() - 1;
+		NTL::vec_GF2E x;
+		NTL::GF2E e;
+
+		for (u64 i = 0; i < setX.size(); ++i)
+		{
+			polyNTL::GF2EFromBlock(e, setX[i], mNumBytes);
+			x.append(e);
+		}
+
+
+		polyNTL::GF2EFromBlock(e, y, mNumBytes);
+
+
+		NTL::GF2EX root_polynomial, polynomial;
+		NTL::BuildFromRoots(root_polynomial, x);
+
+		NTL::GF2EX dummy_polynomial;
+		NTL::random(dummy_polynomial, degree - NTL::deg(root_polynomial));
+
+		polynomial = e+dummy_polynomial*root_polynomial;
+
+		coeffs.resize(NTL::deg(polynomial) + 1);
+		for (int i = 0; i < coeffs.size(); i++) {
+			//get the coefficient polynomial
+			e = NTL::coeff(polynomial, i);
+			BlockFromGF2E(coeffs[i], e, mNumBytes);
+		}
+
+		//GF2EFromBlock(e, setX[0], mNumBytes);
+		//e = NTL::eval(polynomial, e); //get y=f(x) in GF2E
+		//BlockFromGF2E(y1, e, mNumBytes); //convert to block 
+		//std::cout << setX[0] << "\t" << y1 <<" 2"<< std::endl;
+	}
+
+
 	void polyNTL::getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs)
 	{
 		//degree = setX.size() - 1;
