@@ -40,6 +40,17 @@ echo "================================="  >> output
 ./bin/frontend.exe -r 1 -n 8 -t 16 >> output & ./bin/frontend.exe -r 0 -n 8 -t 16 >> output
 sleep 10
 
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 8 -t 32 >> output & ./bin/frontend.exe -r 0 -n 8 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 8 -t 32 >> output & ./bin/frontend.exe -r 0 -n 8 -t 32 >> output
+sleep 10
+
+
 echo "======================================================="  >> output
 echo "======================================================="  >> output
 
@@ -80,6 +91,16 @@ sleep 10
 echo "================================="  >> output
 
 ./bin/frontend.exe -r 1 -n 10 -t 16 >> output & ./bin/frontend.exe -r 0 -n 10 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 10 -t 32 >> output & ./bin/frontend.exe -r 0 -n 10 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 10 -t 32 >> output & ./bin/frontend.exe -r 0 -n 10 -t 32 >> output
 sleep 10
 
 echo "======================================================="  >> output
@@ -123,6 +144,17 @@ echo "================================="  >> output
 ./bin/frontend.exe -r 1 -n 12 -t 16 >> output & ./bin/frontend.exe -r 0 -n 12 -t 16 >> output
 sleep 10
 
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 12 -t 32 >> output & ./bin/frontend.exe -r 0 -n 12 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 12 -t 32 >> output & ./bin/frontend.exe -r 0 -n 12 -t 32 >> output
+sleep 10
+
+
 echo "======================================================="  >> output
 echo "======================================================="  >> output
 
@@ -162,6 +194,16 @@ sleep 10
 echo "================================="  >> output
 
 ./bin/frontend.exe -r 1 -n 14 -t 16 >> output & ./bin/frontend.exe -r 0 -n 14 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 14 -t 32 >> output & ./bin/frontend.exe -r 0 -n 14 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 14 -t 32 >> output & ./bin/frontend.exe -r 0 -n 14 -t 32 >> output
 sleep 10
 
 echo "======================================================="  >> output
@@ -205,6 +247,16 @@ echo "================================="  >> output
 ./bin/frontend.exe -r 1 -n 16 -t 16 >> output & ./bin/frontend.exe -r 0 -n 16 -t 16 >> output
 sleep 10
 
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 16 -t 32 >> output & ./bin/frontend.exe -r 0 -n 16 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 16 -t 32 >> output & ./bin/frontend.exe -r 0 -n 16 -t 32 >> output
+sleep 10
+
 echo "======================================================="  >> output
 echo "======================================================="  >> output
 
@@ -246,6 +298,16 @@ echo "================================="  >> output
 ./bin/frontend.exe -r 1 -n 18 -t 16 >> output & ./bin/frontend.exe -r 0 -n 18 -t 16 >> output
 sleep 10
 
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 18 -t 32 >> output & ./bin/frontend.exe -r 0 -n 18 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 18 -t 32 >> output & ./bin/frontend.exe -r 0 -n 18 -t 32 >> output
+sleep 10
+
 echo "======================================================="  >> output
 echo "======================================================="  >> output
 
@@ -285,6 +347,70 @@ sleep 10
 echo "================================="  >> output
 
 ./bin/frontend.exe -r 1 -n 20 -t 16 >> output & ./bin/frontend.exe -r 0 -n 20 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 20 -t 32 >> output & ./bin/frontend.exe -r 0 -n 20 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 20 -t 32 >> output & ./bin/frontend.exe -r 0 -n 20 -t 32 >> output
+sleep 10
+
+echo "======================================================="  >> output
+echo "======================================================="  >> output
+
+echo "======================================================="  >> output
+echo "======================================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 1  >> output & ./bin/frontend.exe -r 0 -n 22 -t 1 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 1  >> output & ./bin/frontend.exe -r 0 -n 22 -t 1 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 2 >> output & ./bin/frontend.exe -r 0 -n 22 -t 2 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 2 >> output & ./bin/frontend.exe -r 0 -n 22 -t 2 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 4 >> output & ./bin/frontend.exe -r 0 -n 22 -t 4 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 4 >> output & ./bin/frontend.exe -r 0 -n 22 -t 4 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 16 >> output & ./bin/frontend.exe -r 0 -n 22 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 16 >> output & ./bin/frontend.exe -r 0 -n 22 -t 16 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 32 >> output & ./bin/frontend.exe -r 0 -n 22 -t 32 >> output
+sleep 10
+
+echo "================================="  >> output
+
+./bin/frontend.exe -r 1 -n 22 -t 32 >> output & ./bin/frontend.exe -r 0 -n 22 -t 32 >> output
 sleep 10
 
 echo "======================================================="  >> output

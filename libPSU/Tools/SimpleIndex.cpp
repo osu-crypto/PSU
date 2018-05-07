@@ -52,7 +52,7 @@ namespace osuCrypto
 	}
 
 #if 0
-    //template<unsigned int N = 16>
+   // template<unsigned int N = 16>
     double getBinOverflowProb(u64 numBins, u64 numBalls, u64 binSize, double epsilon = 0.0001)
     {
         if (numBalls <= binSize)
@@ -91,7 +91,8 @@ namespace osuCrypto
         return std::max<double>(0, (double)-sec);
     }
 
-    u64 SimpleIndex::get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam)
+
+    u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam)
     {
 
         auto B = std::max<u64>(1, numBalls / numBins);
@@ -131,30 +132,48 @@ namespace osuCrypto
 	u64 SimpleIndex::getMaxBinSize(u64 numBalls) {
 		if (numBalls <= 1 << 8)
 			return 63;
+		else if (numBalls <= 1 << 10)
+			return 58; //10	0.055	58	1.81555 Mb
 		else if (numBalls <= 1 << 12)
-			return 59;
+			return 63; //12	0.05	63	7.84829 Mb
+		else if (numBalls <= 1 << 14)
+			return 62; //14	0.053	62	33.4393 Mb
 		else if (numBalls <= 1 << 16)
-			return 66;
+			return 60; //16	0.058	60	141.783 Mb
+		else if (numBalls <= 1 << 18)
+			return 65; //18	0.052	65	602.201 Mb
 		else if (numBalls <= 1 << 20)
-			return 70;
-
-		return 70;
+			return 61; //20	0.06	61	2544.7 Mb
+		else if (numBalls <= 1 << 22)
+			return 68; //22	0.051	68	10748.8 Mb
+		else if (numBalls <= 1 << 24)
+			return 69; //24	0.051	69	45183 Mb
+		
+		return 69;
 	}
 
 	u64 SimpleIndex::getNumBins(u64 numBalls) {
 
-		u64 temp = 0.0470*numBalls;
-
 		if (numBalls <= 1 << 8)
-			temp = 0.0430*numBalls;
+			return 11;
+		else if (numBalls <= 1 << 10)
+			return 56;
 		else if (numBalls <= 1 << 12)
-			temp = 0.0557*numBalls;
+			return 204;
+		else if (numBalls <= 1 << 14)
+			return 868; //0.053	868	62	267514128 bits = 33.4393 Mb 
 		else if (numBalls <= 1 << 16)
-			temp = 0.0491*numBalls;
+			return 3801; //0.058	3801	60	1134264012 bits = 141.783 Mb 
+		else if (numBalls <= 1 << 18)
+			return 13631; //0.052	13631	65	4817604330 bits = 602.201 Mb
 		else if (numBalls <= 1 << 20)
-			temp = 0.0470*numBalls;
+			return 62914; //0.06	62914	61	20357586292 bits = 2544.7 Mb
+		else if (numBalls <= 1 << 22)
+			return 213909; //0.051	213909	68	85990134546 bits = 10748.8 Mb
+		else if (numBalls <= 1 << 24)
+			return 855638; //0.051	855638	69	361464273100 bits = 45183 Mb
 
-		return temp;
+		return 855638;
 	}
 
     void SimpleIndex::init(u64 numBalls, u64 statSecParam)

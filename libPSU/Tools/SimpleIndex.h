@@ -41,7 +41,10 @@ namespace osuCrypto
         block mHashSeed;
         void print() ;
 		void print(u64 numBin);
-        //static  u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam);
+
+#if 0
+        static  u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam);
+#endif
 
 		u64 getMaxBinSize(u64 numBalls);
 		u64 getNumBins(u64 numBalls);

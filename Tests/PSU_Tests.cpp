@@ -600,15 +600,20 @@ namespace tests_libOTe
 	}
 
 
+
 	void PSU_HashingParameters_Calculation() {
 #if 0
 		SimpleIndex simpleIndex;
-		std::vector<u64> logNumBalls{ 8, 12, 16, 20, 24 };
-		std::vector<u64> lengthCodeWord{  424, 432, 440, 448, 448	};
-		u64 statSecParam = 40, lengthItem=128, compSecParam=128;
+		/*std::vector<u64> logNumBalls{ 8,10, 12,14, 16,18, 20,22, 24 };
+		std::vector<u64> lengthCodeWord{ 424,432, 432, 440,440, 448, 448, 448, 448 };
+		*/
+		std::vector<u64> logNumBalls{ 16 };
+		std::vector<u64> lengthCodeWord{ 440 };
+
+		u64 statSecParam = 40, lengthItem = 128, compSecParam = 128;
 		u64 commCost;
-		double scale = 0,m=0;
-		double iScaleStart = 0.03,iScaleEnd=0.08;
+		double scale = 0, m = 0;
+		double iScaleStart = 0.05, iScaleEnd = 0.12;
 
 		for (u64 idxN = 0; idxN < logNumBalls.size(); idxN++)
 		{
@@ -618,11 +623,13 @@ namespace tests_libOTe
 			{
 				u64 numBins = iScale*numBalls;
 				u64 maxBinSize = simpleIndex.get_bin_size(numBins, numBalls, statSecParam);
-				u64 curCommCost = numBins * (maxBinSize)*lengthCodeWord[idxN]
-					+ numBins*maxBinSize * (maxBinSize + 2)*(statSecParam+log2(maxBinSize+2))
-					+ numBins * maxBinSize*(lengthCodeWord[idxN] + statSecParam)
-					+ numBins * maxBinSize*(compSecParam + lengthItem);
-				
+				u64 polyBytes = (statSecParam + log2(pow(maxBinSize + 1, 2)*numBins));
+				u64 curCommCost = numBins * (maxBinSize + 1)*(
+					lengthCodeWord[idxN]
+					+ (maxBinSize + 1)*polyBytes //poly
+					+ (lengthCodeWord[idxN] + statSecParam) //peqt
+					+ (1 + lengthItem));//ot
+
 
 				if (iScale == iScaleStart)
 				{
@@ -630,8 +637,9 @@ namespace tests_libOTe
 					scale = iScale;
 					m = maxBinSize;
 				}
-				std::cout << iScale << "\t" << numBins << "\t" << maxBinSize <<"\t"
-					<< curCommCost << "\t" << commCost << "\t";
+				std::cout << iScale << "\t" << numBins << "\t" << maxBinSize << "\t"
+					<< curCommCost << " bits = " << (curCommCost / 8)*pow(10, -6) << " Mb \t "
+					<< commCost << " bits = " << (commCost / 8)*pow(10, -6) << " Mb \t ";
 
 				if (commCost > curCommCost)
 				{
@@ -644,15 +652,17 @@ namespace tests_libOTe
 				std::cout << scale << std::endl;
 
 				//std::cout << iScale << "\t" << commCost <<"\t"<< curCommCost << std::endl;
-				iScale += 0.0001;
-			}
+				iScale += 0.001;
+		}
 			std::cout << "##############" << std::endl;
-			std::cout << logNumBalls[idxN] << "\t" << scale << "\t" << m << "\t"<< (commCost/8)*pow(10,-9)<< std::endl;
+			std::cout << logNumBalls[idxN] << "\t" << scale << "\t" << m << "\t" << (commCost / 8)*pow(10, -6) << " Mb" << std::endl;
 			std::cout << "##############" << std::endl;
 
-		}
-#endif	
 	}
+#endif	
+}
+
+
 
 	void Hashing_Test_Impl()
 	{
