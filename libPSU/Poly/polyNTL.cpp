@@ -71,7 +71,7 @@ namespace osuCrypto
 		NTL::BuildFromRoots(root_polynomial, x);
 
 		NTL::GF2EX dummy_polynomial;
-		NTL::random(dummy_polynomial, degree - NTL::deg(root_polynomial));
+		NTL::random(dummy_polynomial, degree - NTL::deg(root_polynomial)+1);
 
 		polynomial = e+dummy_polynomial*root_polynomial;
 

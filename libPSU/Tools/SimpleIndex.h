@@ -39,13 +39,17 @@ namespace osuCrypto
         u64 mMaxBinSize, mNumBins;
         std::vector<bin> mBins;
         block mHashSeed;
-		block mBlkDefaut;
         void print() ;
-
+		void print(u64 numBin);
         //static  u64 get_bin_size(u64 numBins, u64 numBalls, u64 statSecParam);
 
-		void init(u64 numBalls, bool isSender=true, u64 statSecParam = 40);
+		u64 getMaxBinSize(u64 numBalls);
+		u64 getNumBins(u64 numBalls);
+
+		void init(u64 numBalls, u64 statSecParam = 40);
         void insertItems(span<block> items, u64 numThreads);
+	//	void padGlobalItems();
+
     };
 
 }

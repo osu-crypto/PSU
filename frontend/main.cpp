@@ -74,6 +74,9 @@ using namespace osuCrypto;
 #include <thread>
 #include <vector>
 
+u64 disjontedSetSize = 10;
+bool isTest=false;
+
 template<typename ... Args>
 std::string string_format(const std::string& format, Args ... args)
 {
@@ -103,7 +106,7 @@ void Sender(u64 setSize, span<block> inputs, u64 numThreads)
 
 	gTimer.reset();
 	gTimer.setTimePoint("s start");
-	sender.init(40, prng0, inputs, sendChls);
+	sender.init(setSize, inputs.size(), 40, prng0, sendChls);
 	gTimer.setTimePoint("s offline");
 
 	/*std::cout << sender.mBaseOTSend[0][0] << "\t";
@@ -140,7 +143,7 @@ void Receiver(u64 setSize, span<block> inputs,u64 numThreads)
 	KrtwReceiver recv;
 	gTimer.reset();
 	gTimer.setTimePoint("r start");
-	recv.init(40, prng1, inputs, recvChls);
+	recv.init(setSize, inputs.size(), 40, prng1,  recvChls);
 
 		/*std::cout << recv.mBaseOTRecv[0] << "\n";
 		std::cout << recv.mBaseOTSend[0][0] << "\t";
@@ -160,8 +163,13 @@ void Receiver(u64 setSize, span<block> inputs,u64 numThreads)
 		recvChls[g].resetStats();
 	}
 
-	std::cout << "      Total Comm = " << string_format("%5.2f", (dataRecv + dataSent) / std::pow(2.0, 20)) << " MB\n";
+	std::cout << "Total Comm = " << string_format("%5.2f", (dataRecv + dataSent) / std::pow(2.0, 20)) << " MB\n";
 
+	if (isTest)
+	{
+		std::cout << "recv.mDisjointedOutput.size(): " << recv.mDisjointedOutput.size() << std::endl;
+		std::cout << "expectedDisjontedSetSize:      " << disjontedSetSize << std::endl;
+	}
 
 	for (u64 i = 0; i < numThreads; ++i)
 		recvChls[i].close();
@@ -207,7 +215,7 @@ void PSU_Test_Impl()
 	KrtwSender sender;
 	KrtwReceiver recv;
 	auto thrd = std::thread([&]() {
-		recv.init(40, prng1, recvSet, recvChls);
+		recv.init(setSize, recvSet.size(), 40, prng1, recvChls);
 
 		std::cout << recv.mBaseOTRecv[0] << "\n";
 
@@ -218,7 +226,7 @@ void PSU_Test_Impl()
 
 	});
 
-	sender.init(40, prng0, sendSet, sendChls);
+	sender.init(setSize, sendSet.size(), 40, prng0, sendChls);
 
 
 	std::cout << sender.mBaseOTSend[0][0] << "\t";
@@ -254,7 +262,8 @@ void usage(const char* argv0)
 
 int main(int argc, char** argv)
 {
-	u64 setSize = 1 << 16, numThreads = 2;
+	
+	u64 setSize = 1 << 12, numThreads = 1;
 
 
 	if (argv[3][0] == '-' && argv[3][1] == 'n'
@@ -263,6 +272,7 @@ int main(int argc, char** argv)
 		setSize = 1 << atoi(argv[4]);
 		numThreads = atoi(argv[6]);
 	}
+
 
 	std::cout << "SetSize: " << setSize << " vs " << setSize << "   |  numThreads: " << numThreads << "\t";
 
@@ -273,15 +283,17 @@ int main(int argc, char** argv)
 	for (u64 i = 0; i < setSize; ++i)
 	{
 		sendSet[i] = prng0.get<block>();
-		recvSet[i] = prng0.get<block>();
+		recvSet[i] = sendSet[i];
 	}
-	sendSet[0] = recvSet[0];
-	sendSet[2] = recvSet[2];
-	/*std::cout << "intersection: " << sendSet[0] << "\n";
-	std::cout << "intersection: " << sendSet[2] << "\n";*/
-	
+
+	for (u64 i = 0; i < disjontedSetSize; ++i)
+		sendSet[i] = prng0.get<block>();
+
+	//std::random_shuffle(sendSet.begin(), sendSet.begin(), prng0);
+
 
 #if 0
+	isTest = true;
 	std::thread thrd = std::thread([&]() {
 		Sender(setSize, sendSet, numThreads);
 	});
@@ -294,6 +306,7 @@ int main(int argc, char** argv)
 
 	if (argv[1][0] == '-' && argv[1][1] == 't') {
 		
+		isTest = true;
 		std::thread thrd = std::thread([&]() {
 			Sender(setSize,sendSet, numThreads);
 		});
@@ -304,10 +317,12 @@ int main(int argc, char** argv)
 
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
+
 		Sender(setSize, sendSet, numThreads);
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
-		Receiver(setSize, sendSet, numThreads);
+		
+		Receiver(setSize, recvSet, numThreads);
 	}
 	else {
 		usage(argv[0]);

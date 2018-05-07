@@ -5,14 +5,13 @@
 #include <cryptoTools/Common/Timer.h>
 #include "libOTe/Base/naor-pinkas.h"
 #include "libPSU/PsuDefines.h"
-#include "Tools/SimpleIndex.h"
 
 namespace osuCrypto
 {
     using namespace std;
 
 
-	void KrtwSender::init(u64 psiSecParam, PRNG & prng, span<block> inputs, span<Channel> chls)
+	void KrtwSender::init(u64 myInputSize, u64 theirInputSize,u64 psiSecParam, PRNG & prng, span<Channel> chls)
 	{
 		mPsiSecParam = psiSecParam;
 		mPrng.SetSeed(prng.get<block>());
@@ -36,7 +35,12 @@ namespace osuCrypto
 		
 		//std::cout << "baseCount "<< baseCount << std::endl;
 
+		simple.init(myInputSize);
+		theirMaxBinSize = simple.mMaxBinSize; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		
+		Sr.resize(simple.mNumBins);
+		for (u64 i = 0; i < simple.mNumBins; i++)
+			Sr[i].resize(simple.mMaxBinSize);
 
 	}
 
@@ -44,17 +48,10 @@ namespace osuCrypto
 	{
 		
 		u64 numThreads(chls.size());
-		SimpleIndex simple;
-		simple.init(inputs.size(),false);
 		//simple.print();
 		//std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins<< std::endl << IoStream::unlock;
 
-		u64 theirMaxBinSize = simple.mMaxBinSize + 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*simple.mMaxBinSize;
-	
-		std::vector<std::vector<block>> Sr(simple.mNumBins);
-		for (u64 i = 0; i < simple.mNumBins; i++)
-			Sr[i].resize(simple.mMaxBinSize);
 
 		recvOprf.init( numOTs, mPrng, chls[0]); 
 		sendOprf.init(numOTs, mPrng, chls[0]); //PEQT
@@ -77,8 +74,18 @@ namespace osuCrypto
 		sendIKNP.send(sendOTMsg, mPrng, chls[0]);
 
 		simple.insertItems(inputs, numThreads);
+		//############ Global Item \bot ####################
+		for (u64 i = 0; i < simple.mNumBins; ++i)
+		{
+			for (u64 j = simple.mBins[i].mBinRealSizes; j < simple.mMaxBinSize; ++j)
+				simple.mBins[i].items.push_back(AllOneBlock);
+		}
+		
+
+
+
 		//poly
-		u64 polyMaskBytes = (mPsiSecParam + log2(pow(theirMaxBinSize+1,2)*simple.mNumBins) + 7) / 8;
+		u64 polyMaskBytes = (mPsiSecParam + log2(pow(theirMaxBinSize,2)*simple.mNumBins) + 7) / 8;
 
 
 		auto routine = [&](u64 t)
@@ -97,22 +104,18 @@ namespace osuCrypto
 				for (u64 k = 0; k < curStepSize; ++k) //OPRF
 				{
 					u64 binIdx = i + k;
-					for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx)
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
 					{
 						recvOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
 							, &simple.mBins[binIdx].items[itemIdx]
 							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
+					
+						//if (binIdx == 3 && (itemIdx < 6))
+						//{
+						//	std::cout << itemIdx << ": " << simple.mBins[binIdx].items[itemIdx]
+						//	<< "\t==rEnc==\t" << recvEncoding[k*simple.mMaxBinSize + itemIdx] << "\n";
+						//}
 					}
-
-					//TODO: send randome strings here
-					for (u64 itemIdx = simple.mBins[binIdx].mBinRealSizes; itemIdx < simple.mMaxBinSize; ++itemIdx)
-					{
-						block rnd = mPrng.get<block>();
-						recvOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
-							, &simple.mBlkDefaut
-							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
-					}
-
 				}
 
 				recvOprf.sendCorrection(chl, curStepSize*simple.mMaxBinSize);
@@ -122,7 +125,7 @@ namespace osuCrypto
 
 				std::vector<u8> recvBuff;
 				chl.recv(recvBuff); //receive P(x)
-				if (recvBuff.size() != curStepSize*simple.mMaxBinSize*(theirMaxBinSize + 1)* polyMaskBytes)
+				if (recvBuff.size() != curStepSize*simple.mMaxBinSize*(theirMaxBinSize)* polyMaskBytes)
 				{
 					std::cout << "error @ " << (LOCATION) << std::endl;
 					throw std::runtime_error(LOCATION);
@@ -138,8 +141,9 @@ namespace osuCrypto
 				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
 #endif
 
+				u64 iterRecv = 0;
 
-				std::vector<block> coeffs(theirMaxBinSize+1);
+				std::vector<block> coeffs(theirMaxBinSize);
 
 				for (u64 k = 0; k < curStepSize; ++k)
 				{
@@ -149,12 +153,17 @@ namespace osuCrypto
 					{
 
 						for (u64 c = 0; c < coeffs.size(); ++c)
-							memcpy((u8*)&coeffs[c], recvBuff.data() + (k*itemIdx*(theirMaxBinSize + 1) + c)* polyMaskBytes, polyMaskBytes);
-				
+						{
+							memcpy((u8*)&coeffs[c], recvBuff.data() + iterRecv, polyMaskBytes);
+							iterRecv += polyMaskBytes;
+						}
+
+
 #ifdef _MSC_VER
 						std::cout << IoStream::lock;
 						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
 						std::cout << IoStream::unlock;
+						//Sr[binIdx][itemIdx]=ZeroBlock;
 #else
 						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
 #endif // _MSC_VER
@@ -162,12 +171,14 @@ namespace osuCrypto
 					
 
 #ifdef DEBUG
-						if (binIdx == 1 && itemIdx == 1)
+						if (binIdx == 3 && (itemIdx < 6))
 						{
-							std::cout << IoStream::lock << "mBins[1].items[1] " << simple.mBins[binIdx].items[itemIdx] << std::endl << IoStream::unlock;
-							std::cout << IoStream::lock << "Sr[1] " << Sr[binIdx][itemIdx] << std::endl << IoStream::unlock;
+							std::cout << "Sr [3][" << itemIdx << "]: " << Sr[3][itemIdx] << "\t==rEnc\t"
+								<< recvEncoding[k*simple.mMaxBinSize + itemIdx] << "\n";
+
 						}
 #endif
+						
 					}
 			}
 #endif
@@ -175,7 +186,7 @@ namespace osuCrypto
 
 
 				//==========================PEQT==========================
-
+#if 1
 				sendOprf.recvCorrection(chl, curStepSize*simple.mMaxBinSize);
 				std::vector<block> sendEncoding(curStepSize*simple.mMaxBinSize);
 
@@ -233,9 +244,9 @@ namespace osuCrypto
 
 						//
 						if(itemIdx<simple.mBins[binIdx].mBinRealSizes)
-							maskItem = simple.mBins[binIdx].items[itemIdx] + sendOTMsg[binIdx*simple.mMaxBinSize + itemIdx][isOtMsgSwap];
+							maskItem = simple.mBins[binIdx].items[itemIdx]^sendOTMsg[binIdx*simple.mMaxBinSize + itemIdx][isOtMsgSwap];
 						else
-							maskItem = simple.mBlkDefaut + sendOTMsg[binIdx*simple.mMaxBinSize + itemIdx][isOtMsgSwap];
+							maskItem = AllOneBlock^sendOTMsg[binIdx*simple.mMaxBinSize + itemIdx][isOtMsgSwap];
 
 						memcpy(sendBuff.data() + (k*simple.mMaxBinSize + itemIdx)* maskOTlength, (u8*)&maskItem, maskOTlength);
 
@@ -255,6 +266,7 @@ namespace osuCrypto
 				//gTimer.setTimePoint("s Rabin OT");
 
 #endif		
+#endif
 			}
 
 

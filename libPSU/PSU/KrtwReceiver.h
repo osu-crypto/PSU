@@ -7,6 +7,8 @@
 #include "libOTe/NChooseOne/Kkrt/KkrtNcoOtReceiver.h"
 #include "libOTe/TwoChooseOne/IknpOtExtReceiver.h"
 #include "Poly/polyNTL.h"
+#include "Tools/SimpleIndex.h"
+
 
 namespace osuCrypto
 {
@@ -22,8 +24,11 @@ namespace osuCrypto
 		std::vector<block> mS;
 		KkrtNcoOtSender sendOprf;
 		KkrtNcoOtReceiver recvOprf;
-		
-		
+		SimpleIndex simple;
+		u64 polyMaskBytes;
+
+		std::vector<std::vector<block>> Ss;
+		u64 theirMaxBinSize;
 
 		polyNTL poly;
 		PRNG mPrng;
@@ -32,9 +37,9 @@ namespace osuCrypto
 		BitVector mBaseChoice;
 		std::vector<std::array<block, 2>> mBaseOTSend;
 
-		std::vector<block> PsuOutput;
+		std::vector<block> mDisjointedOutput;
 
-		void init(u64 psiSecParam, PRNG& prng, span<block> inputs, span<Channel> chls);
+		void init(u64 myInputSize, u64 theirInputSize, u64 psiSecParam, PRNG& prng, span<Channel> chls);
 		void output(span<block> inputs, span<Channel> chls);
 
     };

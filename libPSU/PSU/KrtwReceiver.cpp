@@ -6,13 +6,12 @@
 #include <cryptoTools/Crypto/Commit.h>
 #include <cryptoTools/Network/Channel.h>
 #include "libPSU/PsuDefines.h"
-#include "Tools/SimpleIndex.h"
 
 using namespace std;
 
 namespace osuCrypto
 {
-	void KrtwReceiver::init(u64 psiSecParam, PRNG & prng, span<block> inputs, span<Channel> chls)
+	void KrtwReceiver::init(u64 myInputSize, u64 theirInputSize, u64 psiSecParam, PRNG & prng, span<Channel> chls)
 	{
 		mPsiSecParam = psiSecParam;
 		mPrng.SetSeed(prng.get<block>());
@@ -34,36 +33,44 @@ namespace osuCrypto
 		baseOTs.send(mBaseOTSend, mPrng, chls[0], 1);
 		recvOprf.setBaseOts(mBaseOTSend);
 
-		
+		simple.init(myInputSize);
+		Ss.resize(simple.mNumBins);
+
+		theirMaxBinSize = simple.mMaxBinSize; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
+
+		polyMaskBytes = (mPsiSecParam + log2(pow(simple.mMaxBinSize, 2)*simple.mNumBins) + 7) / 8;
+
+		for (u64 i = 0; i < simple.mNumBins; i++)
+		{
+			Ss[i].resize(theirMaxBinSize);
+			for (u64 j = 0; j < theirMaxBinSize; j++)
+			{
+				Ss[i][j] = ZeroBlock;
+				block tem = mPrng.get<block>();
+				memcpy((u8*)&Ss[i][j],(u8*)&tem, polyMaskBytes);
+			}
+		}
+
+	/*	for (u64 j = 0; j < 6; j++)
+			std::cout << "Ss [3][" << j << "]: " << Ss[3][j]  << "\n";
+*/
+
+
 
 	}
 	void KrtwReceiver::output(span<block> inputs, span<Channel> chls)
 	{
 		u64 numThreads(chls.size());
 		const bool isMultiThreaded = numThreads > 1;
-
-	//	std::cout << "Receiver: numThreads" << numThreads << "\n";
-
 		std::mutex mtx;
 
-		SimpleIndex simple;
-		simple.init(inputs.size(),true);
 		//simple.print();
 
 		//std::cout << "Receiver: " << simple.mMaxBinSize << "\t " <<simple.mNumBins<< std::endl ;
 
-		u64 theirMaxBinSize = simple.mMaxBinSize - 1; //assume same set size, sender has mMaxBinSize, receiver has mMaxBinSize+1
 		u64	numOTs = simple.mNumBins*(theirMaxBinSize);
 
 		std::vector<block> coeffs;
-		
-		std::vector<std::vector<block>> Ss(simple.mNumBins);
-		for (u64 i = 0; i < simple.mNumBins; i++)
-		{
-			Ss[i].resize(theirMaxBinSize);
-			for (u64 j = 0; j < theirMaxBinSize; j++)
-				Ss[i][j] = mPrng.get<block>();
-		}
 
 #ifdef DEBUG
 		std::cout << IoStream::lock << "mBins[1].items[1]  " << simple.mBins[1].items[1] << std::endl << IoStream::unlock;
@@ -96,7 +103,6 @@ namespace osuCrypto
 		std::cout << IoStream::lock << recvOTMsg[0] << std::endl << IoStream::unlock;
 #endif
 		//poly
-		u64 polyMaskBytes = (mPsiSecParam + log2(pow(simple.mMaxBinSize + 1,2)*simple.mNumBins) + 7) / 8;
 
 		auto routine = [&](u64 t)
 		{
@@ -122,7 +128,9 @@ namespace osuCrypto
 
 				sendOprf.recvCorrection(chl, curStepSize*theirMaxBinSize); //OPRF
 
-				std::vector<u8> sendBuff(curStepSize*theirMaxBinSize*(simple.mMaxBinSize + 1)*polyMaskBytes);
+				std::vector<u8> sendBuff(curStepSize*theirMaxBinSize*(simple.mMaxBinSize)*polyMaskBytes);
+
+				u64 iterSend = 0;
 
 				//==========================PMT==========================
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -133,28 +141,40 @@ namespace osuCrypto
 					{
 
 						//std::vector<block> setY(simple.mBins[binIdx].mBinRealSizes, Ss[binIdx][itemTheirIdx]);
-						std::vector<block>sendEncoding(simple.mBins[binIdx].mBinRealSizes);
+						std::vector<block>sendEncoding(simple.mBins[binIdx].mBinRealSizes+1);
+						u64 idxBot = simple.mBins[binIdx].mBinRealSizes;
 
-						for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; ++itemIdx) //compute many F(k,xi)
+						for (u64 itemIdx = 0; itemIdx < simple.mBins[binIdx].mBinRealSizes; itemIdx++) //compute many F(k,xi)
+						{
 							sendOprf.encode(binIdx*theirMaxBinSize + itemTheirIdx
 								, &simple.mBins[binIdx].items[itemIdx], (u8*)&sendEncoding[itemIdx], sizeof(block));
+						}
 
-						//setY.emplace_back(mPrng.get<block>()); //add randome point
-						//sendEncoding.emplace_back(mPrng.get<block>());
+
+						//############ Global Item \bot ####################
+						sendOprf.encode(binIdx*theirMaxBinSize + itemTheirIdx
+							, &AllOneBlock, (u8*)&sendEncoding[idxBot], sizeof(block));
+
 
 						//poly
 #ifdef _MSC_VER
 						std::cout << IoStream::lock;
-						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, Ss[binIdx][itemTheirIdx], coeffs);
+						poly.getBlkCoefficients(simple.mMaxBinSize-1, sendEncoding, Ss[binIdx][itemTheirIdx], coeffs);
 						std::cout << IoStream::unlock;
+						/*coeffs.resize(simple.mMaxBinSize);
+						for (u64 c = 0; c < coeffs.size(); ++c)
+							coeffs[c] = ZeroBlock;*/
+
 #else 
-						poly.getBlkCoefficients(simple.mMaxBinSize + 1, sendEncoding, Ss[binIdx][itemTheirIdx], coeffs);
+						poly.getBlkCoefficients(simple.mMaxBinSize-1, sendEncoding, Ss[binIdx][itemTheirIdx], coeffs);
 
 #endif
 
-
 						for (u64 c = 0; c < coeffs.size(); ++c)
-							memcpy(sendBuff.data() + (k*itemTheirIdx*(simple.mMaxBinSize + 1) + c)* polyMaskBytes, (u8*)&coeffs[c], polyMaskBytes);
+						{
+							memcpy(sendBuff.data() + iterSend, (u8*)&coeffs[c], polyMaskBytes);
+							iterSend += polyMaskBytes;
+						}
 
 						//std::cout << IoStream::lock <<"r "<< binIdx << "\t" << itemTheirIdx << std::endl << IoStream::unlock;
 					}
@@ -164,6 +184,7 @@ namespace osuCrypto
 
 
 				//==========================PEQT==========================
+#if 1
 				std::vector<block> recvEncoding(curStepSize*theirMaxBinSize);
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -273,24 +294,31 @@ namespace osuCrypto
 							block psuItem;
 							memcpy((u8*)&psuItem, recvBuff.data() + (k*theirMaxBinSize + itemTheirIdx)* maskOTlength, maskOTlength);
 
-							psuItem = psuItem + recvOTMsg[binIdx*theirMaxBinSize + itemTheirIdx];
+							psuItem = psuItem^recvOTMsg[binIdx*theirMaxBinSize + itemTheirIdx];
 
-
+						/*	std::cout << "psuItem: " << psuItem << std::endl;
+							std::cout << "itemTheirIdx: " << itemTheirIdx << std::endl;
+							std::cout << "binIdx: " << binIdx << std::endl;
+*/
 							if (isMultiThreaded)
 							{
 								std::lock_guard<std::mutex> lock(mtx);
-								PsuOutput.emplace_back(psuItem);
+								{
+									mDisjointedOutput.emplace_back(psuItem);
+									/*std::cout << "itemTheirIdx: " << itemTheirIdx << std::endl;
+									std::cout << "binIdx: " << binIdx << std::endl;*/
+								}
 							}
 							else
 							{
-								PsuOutput.emplace_back(psuItem);
+								mDisjointedOutput.emplace_back(psuItem);
 							}
 						}
 
 					}
 				}
 #endif	
-
+#endif
 			}
 		};
 
@@ -306,7 +334,6 @@ namespace osuCrypto
 		for (auto& thrd : thrds)
 			thrd.join();
 
-		std::cout << "PsuOutput.size() " <<PsuOutput.size() << std::endl;
 
 	}
 }

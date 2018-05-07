@@ -23,13 +23,33 @@ namespace osuCrypto
             std::cout << " contains " << mBins[i].mBinRealSizes << " elements" << std::endl;
 
             for (u64 j = 0; j < mBins[i].items.size(); ++j)
-                std::cout << "    idx=" << mBins[i].items[j] << std::endl;
+                std::cout << "    idx= " << j << ": " << mBins[i].items[j] << std::endl;
 			
             std::cout << std::endl;
         }
 
         std::cout << std::endl;
     }
+
+	void SimpleIndex::print(u64 numBin)
+	{
+		std::cout << "mMaxBinSize=" << mMaxBinSize << std::endl;
+		std::cout << "mNumBins=" << mNumBins << std::endl;
+		u64 i = numBin;
+		{
+			std::cout << "Bin #" << i << std::endl;
+
+			std::cout << " contains " << mBins[i].mBinRealSizes << " elements" << std::endl;
+
+			for (u64 j = 0; j < mBins[i].items.size(); ++j)
+				std::cout << "    idx= " << j << ": " << mBins[i].items[j] << std::endl;
+
+
+			std::cout << std::endl;
+		}
+
+		std::cout << std::endl;
+	}
 
 #if 0
     //template<unsigned int N = 16>
@@ -108,43 +128,43 @@ namespace osuCrypto
 
 #endif
 
-    void SimpleIndex::init(u64 numBalls, bool isReceiver, u64 statSecParam)
-    {
+	u64 SimpleIndex::getMaxBinSize(u64 numBalls) {
 		if (numBalls <= 1 << 8)
-		{
-			mNumBins = 0.0430*numBalls;
-			mMaxBinSize = 63;
-		}
+			return 63;
 		else if (numBalls <= 1 << 12)
-		{
-			mNumBins = 0.0557*numBalls;
-			mMaxBinSize = 59;
-		}
+			return 59;
 		else if (numBalls <= 1 << 16)
-		{
-			mNumBins = 0.0491*numBalls;
-			mMaxBinSize = 66;
-		}
+			return 66;
 		else if (numBalls <= 1 << 20)
-		{
-			mNumBins = 0.0470*numBalls;
-			mMaxBinSize = 70;
-		}
-		else
-			throw std::runtime_error("not implemented");
+			return 70;
+
+		return 70;
+	}
+
+	u64 SimpleIndex::getNumBins(u64 numBalls) {
+
+		u64 temp = 0.0470*numBalls;
+
+		if (numBalls <= 1 << 8)
+			temp = 0.0430*numBalls;
+		else if (numBalls <= 1 << 12)
+			temp = 0.0557*numBalls;
+		else if (numBalls <= 1 << 16)
+			temp = 0.0491*numBalls;
+		else if (numBalls <= 1 << 20)
+			temp = 0.0470*numBalls;
+
+		return temp;
+	}
+
+    void SimpleIndex::init(u64 numBalls, u64 statSecParam)
+    {
+		mNumBins = getNumBins(numBalls);
+		mMaxBinSize = getMaxBinSize(numBalls);
+
+		mMaxBinSize += 1; //add 1 bot for PSU
 
 		mBins.resize(mNumBins);
-		
-		if (isReceiver) 
-			mMaxBinSize += 1;
-
-		/*for (u64 i = 0; i < mBins.size(); i++)
-		{
-			mBins[i].items.resize(mMaxBinSize);
-		}*/
-
-		mBlkDefaut = OneBlock;
-
     }
 
 
@@ -190,21 +210,15 @@ namespace osuCrypto
 
 		for (auto& thrd : thrds)
 			thrd.join();
-
-
-		//For debug
-		mBins[1].items[1] = AllOneBlock;
-
-
+		
 		//add a default block 
 			for (u64 i = 0; i < mNumBins; ++i)
 			{
-				if (mBins[i].items.size()<mMaxBinSize)
-					mBins[i].items.push_back(mBlkDefaut);
-
+			
 				mBins[i].mBinRealSizes = mBins[i].items.size();
 			}
 
     }
 
+	
 }

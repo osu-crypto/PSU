@@ -532,7 +532,7 @@ namespace tests_libOTe
 	void PSU_Test_Impl()
 	{
 		setThreadName("Sender");
-		u64 setSize = 1 << 7, psiSecParam = 40, numThreads(2);
+		u64 setSize = 1 << 10, psiSecParam = 40, numThreads(1);
 
 		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
 		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
@@ -542,12 +542,14 @@ namespace tests_libOTe
 		for (u64 i = 0; i < setSize; ++i)
 		{
 			sendSet[i] = prng0.get<block>();
-			recvSet[i] = prng0.get<block>();
+			recvSet[i] = sendSet[i];// prng0.get<block>();
 		}
-		sendSet[0] = recvSet[0];
-		sendSet[2] = recvSet[2];
-		std::cout << "intersection: " << sendSet[0] << "\n";
-		std::cout << "intersection: " << sendSet[2] << "\n";
+		//std::random_shuffle(sendSet.begin(), sendSet.begin(), prng0);
+
+		sendSet[0] = prng0.get<block>();
+		sendSet[1] = prng0.get<block>();
+		std::cout << "disjonted: " << sendSet[0] << " vs " << recvSet[0] << "\n";
+		std::cout << "disjonted: " << sendSet[1] << " vs " << recvSet[1]<< "\n";
 
 
 		// set up networking
@@ -567,16 +569,25 @@ namespace tests_libOTe
 		KrtwSender sender;
 		KrtwReceiver recv;
 		auto thrd = std::thread([&]() {
-			recv.init(40, prng1, recvSet, recvChls);					
+			recv.init(setSize, setSize,40, prng1, recvChls);
 			recv.output(recvSet, recvChls);
 
 		});
 
-		sender.init(40, prng0, sendSet, sendChls);
+		sender.init(setSize, setSize, 40, prng0,sendChls);
 		sender.output(sendSet, sendChls);
 		thrd.join();
 
+		/*std::cout << "=======sender.simple.print(3);===========\n";
+		sender.simple.print();
+		std::cout << "=======recv.simple.print(3)===========\n";
+		recv.simple.print();*/
 
+		std::cout << "recv.mDisjointedOutput.size(): " << recv.mDisjointedOutput.size() << std::endl;
+		for (u64 i = 0; i < recv.mDisjointedOutput.size(); ++i)//thrds.size()
+		{
+			std::cout << "#id: " << recv.mDisjointedOutput[i] << std::endl;
+		}
 
 
 		for (u64 i = 0; i < numThreads; ++i)
@@ -694,7 +705,7 @@ namespace tests_libOTe
 			for (u64 i = 0; i < 10; ++i)
 			{
 				poly.evalPolynomial(coeffs, setX[i], y1);
-				if(memcmp((u8*)&y1, (u8*)&y,64/8))
+				if(!memcmp((u8*)&y1, (u8*)&y,64/8))
 					std::cout << y << "\t" << y1 << std::endl;
 
 			}
