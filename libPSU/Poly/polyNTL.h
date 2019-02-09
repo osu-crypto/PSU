@@ -16,6 +16,7 @@
 #include "NTL/ZZ_p.h"
 #include "NTL/GF2EX.h" 
 #include "NTL/GF2XFactoring.h"
+#include "NTL/GF2EXFactoring.h"
 
 namespace osuCrypto
 {
@@ -33,12 +34,14 @@ public:
 	void NtlPolyInit(u64 numBytes);
 	void GF2EFromBlock(NTL::GF2E &element, block& blk, u64 size);
 	void BlockFromGF2E(block& blk, NTL::GF2E & element, u64 size);
-	void getBlkCoefficients(NTL::vec_GF2E& vecX, NTL::vec_GF2E& vecY, std::vector<block>& coeffs);
-	void getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs);
+	NTL::GF2EX getBlkCoefficients(NTL::vec_GF2E& vecX, NTL::vec_GF2E& vecY, std::vector<block>& coeffs);
+	NTL::GF2EX getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs);
 	void evalPolynomial(std::vector<block>& coeffs, block& x, block& y);
 
-	void getBlkCoefficients(u64 degree, std::vector<block>& setX, block& y, std::vector<block>& coeffs); //same y
+	NTL::GF2EX getBlkCoefficients(u64 degree, std::vector<block>& setX, block& y, std::vector<block>& coeffs); //same y
 
+	void findRootsOffset(NTL::GF2EX f, block offset, std::vector<block>& roots);
+	void findRootOffset(NTL::GF2EX polynomial, block offset, block& root);
 };
 
 }

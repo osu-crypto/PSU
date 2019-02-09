@@ -35,7 +35,7 @@ namespace osuCrypto
 	}
 
 	//computes coefficients (in blocks) of f such that f(x[i]) = y[i]
-	void polyNTL::getBlkCoefficients(NTL::vec_GF2E& vecX, NTL::vec_GF2E& vecY, std::vector<block>& coeffs)
+	NTL::GF2EX polyNTL::getBlkCoefficients(NTL::vec_GF2E& vecX, NTL::vec_GF2E& vecY, std::vector<block>& coeffs)
 	{
 		NTL::GF2E e;
 
@@ -49,9 +49,10 @@ namespace osuCrypto
 			e = NTL::coeff(polynomial, i);
 			BlockFromGF2E(coeffs[i], e, mNumBytes);
 		}
+		return polynomial;
 	}
 
-	void polyNTL::getBlkCoefficients(u64 degree, std::vector<block>& setX, block& y, std::vector<block>& coeffs)
+	NTL::GF2EX polyNTL::getBlkCoefficients(u64 degree, std::vector<block>& setX, block& y, std::vector<block>& coeffs)
 	{
 		//degree = setX.size() - 1;
 		NTL::vec_GF2E x;
@@ -70,10 +71,14 @@ namespace osuCrypto
 		NTL::GF2EX root_polynomial, polynomial;
 		NTL::BuildFromRoots(root_polynomial, x);
 
+		//NTL::vec_GF2E roots2E = NTL::FindRoots(root_polynomial);
+
 		NTL::GF2EX dummy_polynomial;
 		NTL::random(dummy_polynomial, degree - NTL::deg(root_polynomial)+1);
 
 		polynomial = e+dummy_polynomial*root_polynomial;
+
+	
 
 		coeffs.resize(NTL::deg(polynomial) + 1);
 		for (int i = 0; i < coeffs.size(); i++) {
@@ -86,10 +91,12 @@ namespace osuCrypto
 		//e = NTL::eval(polynomial, e); //get y=f(x) in GF2E
 		//BlockFromGF2E(y1, e, mNumBytes); //convert to block 
 		//std::cout << setX[0] << "\t" << y1 <<" 2"<< std::endl;
+
+		return polynomial;
 	}
 
 
-	void polyNTL::getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs)
+	NTL::GF2EX polyNTL::getBlkCoefficients(u64 degree, std::vector<block>& setX, std::vector<block>& setY, std::vector<block>& coeffs)
 	{
 		//degree = setX.size() - 1;
 		NTL::vec_GF2E x; NTL::vec_GF2E y;
@@ -125,6 +132,8 @@ namespace osuCrypto
 		NTL::GF2EX d_polynomial;
 		polynomial = polynomial + dummy_polynomial*root_polynomial;
 
+		
+
 		coeffs.resize(NTL::deg(polynomial) + 1);
 		for (int i = 0; i < coeffs.size(); i++) {
 			//get the coefficient polynomial
@@ -136,6 +145,7 @@ namespace osuCrypto
 		//e = NTL::eval(polynomial, e); //get y=f(x) in GF2E
 		//BlockFromGF2E(y1, e, mNumBytes); //convert to block 
 		//std::cout << setX[0] << "\t" << y1 <<" 2"<< std::endl;
+		return polynomial;
 	}
 
 	//compute y=f(x) giving coefficients (in block)
@@ -153,6 +163,46 @@ namespace osuCrypto
 		GF2EFromBlock(e, x, mNumBytes);
 		e = NTL::eval(res_polynomial, e); //get y=f(x) in GF2E
 		BlockFromGF2E(y, e, mNumBytes); //convert to block 
+	}
+
+
+	void polyNTL::findRootsOffset(NTL::GF2EX polynomial, block offset, std::vector<block>& blkRoots)
+	{
+		NTL::GF2E s; //s*
+		polyNTL::GF2EFromBlock(s, offset, mNumBytes);
+		polynomial = polynomial - s; //P(x)-s*
+
+		NTL::vec_GF2E roots2E=NTL::FindRoots(polynomial);
+		blkRoots.resize(roots2E.length());
+
+		for (u64 i = 0; i < roots2E.length(); ++i)
+		{
+			BlockFromGF2E(blkRoots[i], roots2E[i], mNumBytes); //convert to block 
+		}
+
+	}
+
+	void polyNTL::findRootOffset(NTL::GF2EX polynomial, block offset, block& blkRoot)
+	{
+		NTL::GF2E s; //s*
+		polyNTL::GF2EFromBlock(s, offset, mNumBytes);
+		polynomial = polynomial - s; //P(x)-s*
+
+		std::vector<block> coeffs(NTL::deg(polynomial) + 1);
+		std::cout << coeffs.size() << std::endl;
+
+
+		for (int i = 0; i < coeffs.size(); i++) {
+			//get the coefficient polynomial
+			NTL::GF2E e = NTL::coeff(polynomial, i);
+			BlockFromGF2E(coeffs[i], e, mNumBytes);
+			std::cout << coeffs[i] << std::endl;
+		}
+
+
+		//NTL::GF2E root2E = NTL::FindRoot(polynomial);
+		//BlockFromGF2E(blkRoot, root2E, mNumBytes); //convert to block 
+
 	}
 
 }

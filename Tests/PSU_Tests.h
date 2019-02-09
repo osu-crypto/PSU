@@ -9,4 +9,5 @@ namespace tests_libOTe
 	void Hashing_Test_Impl();
 	void NTL_Poly_Test_Impl();
 	void myTest();
+	void PSUnoOT_Test_Impl();
 }

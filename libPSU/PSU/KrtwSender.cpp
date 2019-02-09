@@ -311,4 +311,222 @@ namespace osuCrypto
 			thrd.join();
 	}
 
+
+	void KrtwSender::outputNoOT(span<block> inputs, span<Channel> chls)
+	{
+
+		u64 numThreads(chls.size());
+		//simple.print();
+		//std::cout << IoStream::lock << "Sender: " << simple.mMaxBinSize << "\t " << simple.mNumBins<< std::endl << IoStream::unlock;
+
+		u64	numOTs = simple.mNumBins*simple.mMaxBinSize;
+
+		recvOprf.init(numOTs, mPrng, chls[0]);
+		sendOprf.init(numOTs, mPrng, chls[0]); //PEQT
+
+		IknpOtExtSender sendIKNP;
+		BitVector baseChoices(128);
+		std::vector<block> baseRecv(128);
+
+		baseChoices.copy(mBaseChoice, 0, 128);
+		baseRecv.assign(mBaseOTRecv.begin(), mBaseOTRecv.begin() + 128);
+
+		/*for (u64 i = 0; i < baseRecv.size(); i++)
+		{
+		baseChoices[i] = mBaseChoice[i];
+		baseRecv[i] = mBaseOTRecv[i];
+		}*/
+
+		sendIKNP.setBaseOts(baseRecv, baseChoices);
+		std::vector<std::array<block, 2>> sendOTMsg(numOTs);
+		sendIKNP.send(sendOTMsg, mPrng, chls[0]);
+
+		simple.insertItems(inputs, numThreads);
+		//############ Global Item \bot ####################
+		for (u64 i = 0; i < simple.mNumBins; ++i)
+		{
+			for (u64 j = simple.mBins[i].mBinRealSizes; j < simple.mMaxBinSize; ++j)
+				simple.mBins[i].items.push_back(AllOneBlock);
+		}
+
+
+
+
+		//poly
+		u64 polyMaskBytes = (mPsiSecParam + log2(pow(theirMaxBinSize, 2)*simple.mNumBins) + 7) / 8;
+
+
+		auto routine = [&](u64 t)
+		{
+			auto& chl = chls[t];
+			u64 binStartIdx = simple.mNumBins * t / numThreads;
+			u64 tempBinEndIdx = (simple.mNumBins * (t + 1) / numThreads);
+			u64 binEndIdx = std::min(tempBinEndIdx, simple.mNumBins);
+
+			for (u64 i = binStartIdx; i < binEndIdx; i += stepSize)
+			{
+				auto curStepSize = std::min(stepSize, binEndIdx - i);
+				std::vector<block> recvEncoding(curStepSize*simple.mMaxBinSize);
+
+				//==========================PMT==========================
+				for (u64 k = 0; k < curStepSize; ++k) //OPRF
+				{
+					u64 binIdx = i + k;
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						recvOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
+							, &simple.mBins[binIdx].items[itemIdx]
+							, (u8*)&recvEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
+
+						//if (binIdx == 3 && (itemIdx < 6))
+						//{
+						//	std::cout << itemIdx << ": " << simple.mBins[binIdx].items[itemIdx]
+						//	<< "\t==rEnc==\t" << recvEncoding[k*simple.mMaxBinSize + itemIdx] << "\n";
+						//}
+					}
+				}
+
+				recvOprf.sendCorrection(chl, curStepSize*simple.mMaxBinSize);
+
+
+#if 1 //poly
+
+				std::vector<u8> recvBuff;
+				chl.recv(recvBuff); //receive P(x)
+				if (recvBuff.size() != curStepSize*simple.mMaxBinSize*(theirMaxBinSize)* polyMaskBytes)
+				{
+					std::cout << "error @ " << (LOCATION) << std::endl;
+					throw std::runtime_error(LOCATION);
+				}
+
+#ifdef _MSC_VER
+				std::cout << IoStream::lock;
+				polyNTL poly;
+				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+				std::cout << IoStream::unlock;
+#else
+				polyNTL poly;
+				poly.NtlPolyInit(polyMaskBytes);//length=lambda +log(|Y|)
+#endif
+
+				u64 iterRecv = 0;
+
+				std::vector<block> coeffs(theirMaxBinSize);
+
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					u64 binIdx = i + k;
+
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+
+						for (u64 c = 0; c < coeffs.size(); ++c)
+						{
+							memcpy((u8*)&coeffs[c], recvBuff.data() + iterRecv, polyMaskBytes);
+							iterRecv += polyMaskBytes;
+						}
+
+
+#ifdef _MSC_VER
+						std::cout << IoStream::lock;
+						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
+						std::cout << IoStream::unlock;
+						//Sr[binIdx][itemIdx]=ZeroBlock;
+#else
+						poly.evalPolynomial(coeffs, recvEncoding[k*simple.mMaxBinSize + itemIdx], Sr[binIdx][itemIdx]);
+#endif // _MSC_VER
+
+
+
+#ifdef DEBUG
+						if (binIdx == 3 && (itemIdx < 6))
+						{
+							std::cout << "Sr [3][" << itemIdx << "]: " << Sr[3][itemIdx] << "\t==rEnc\t"
+								<< recvEncoding[k*simple.mMaxBinSize + itemIdx] << "\n";
+
+						}
+#endif
+
+					}
+				}
+#endif
+				//gTimer.setTimePoint("s compute s");
+
+
+#if 0
+				//==========================PEQT==========================
+
+				sendOprf.recvCorrection(chl, curStepSize*simple.mMaxBinSize);
+				std::vector<block> sendEncoding(curStepSize*simple.mMaxBinSize);
+
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					u64 binIdx = i + k;
+
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						sendOprf.encode(binIdx*simple.mMaxBinSize + itemIdx
+							, &Sr[binIdx][itemIdx], (u8*)&sendEncoding[k*simple.mMaxBinSize + itemIdx], sizeof(block));
+#ifdef DEBUG
+						if (binIdx == 1 && itemIdx == 1)
+							std::cout << IoStream::lock << "sendEncoding " << sendEncoding[k*simple.mMaxBinSize + itemIdx] << std::endl << IoStream::unlock;
+#endif
+					}
+				}
+
+
+				u64 maskPEQTlength = mPsiSecParam / 8;
+				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskPEQTlength);
+
+				for (u64 c = 0; c < sendEncoding.size(); ++c)
+					memcpy(sendBuff.data() + c* maskPEQTlength, (u8*)&sendEncoding[c], maskPEQTlength);
+
+				chl.asyncSend(std::move(sendBuff)); //send OPRF(s*) == done with sending PEQT
+
+													//gTimer.setTimePoint("s sending OPRF(s*)");
+#endif
+
+			//==========================send S* directly==========================
+#if 1
+
+				u64 maskSlength = polyMaskBytes; //to brute force 
+				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskSlength);
+
+				int idxSendBuff = 0;
+
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					u64 binIdx = i + k;
+
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						memcpy(sendBuff.data() + idxSendBuff, (u8*)&Sr[binIdx][itemIdx], maskSlength);
+						idxSendBuff += maskSlength;
+
+					}
+				}
+
+				chl.asyncSend(std::move(sendBuff)); //send (s*) 
+
+#endif
+
+			}
+
+
+		};
+
+
+		std::vector<std::thread> thrds(chls.size());
+		for (u64 i = 0; i < thrds.size(); ++i)
+		{
+			thrds[i] = std::thread([=] {
+				routine(i);
+			});
+		}
+
+		for (auto& thrd : thrds)
+			thrd.join();
+	}
+
+
 }

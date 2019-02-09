@@ -27,6 +27,13 @@ namespace tests_libOTe
 			PSU_Test_Impl();
 		}
 
+		TEST_METHOD(PSUnoOT_TestVS)
+		{
+			InitDebugPrinting();
+			PSUnoOT_Test_Impl();
+		}
+
+
 		TEST_METHOD(HashingParameters_CalcVS)
 		{
 			InitDebugPrinting();

@@ -41,6 +41,7 @@ namespace osuCrypto
 
 		void init(u64 myInputSize, u64 theirInputSize, u64 psiSecParam, PRNG& prng, span<Channel> chls);
 		void output(span<block> inputs, span<Channel> chls);
+		void outputNoOT(span<block> inputs, span<Channel> chls);
 
     };
 

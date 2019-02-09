@@ -599,6 +599,76 @@ namespace tests_libOTe
 
 	}
 
+	void PSUnoOT_Test_Impl()
+	{
+		setThreadName("Sender");
+		u64 setSize = 1 << 10, psiSecParam = 40, numThreads(1);
+
+		PRNG prng0(_mm_set_epi32(4253465, 3434565, 234435, 23987045));
+		PRNG prng1(_mm_set_epi32(4253465, 3434565, 234435, 23987025));
+
+
+		std::vector<block> sendSet(setSize), recvSet(setSize);
+		for (u64 i = 0; i < setSize; ++i)
+		{
+			sendSet[i] = prng0.get<block>();
+			recvSet[i] = sendSet[i];// prng0.get<block>();
+		}
+		//std::random_shuffle(sendSet.begin(), sendSet.begin(), prng0);
+
+		sendSet[0] = prng0.get<block>();
+		sendSet[1] = prng0.get<block>();
+		std::cout << "disjonted: " << sendSet[0] << " vs " << recvSet[0] << "\n";
+		std::cout << "disjonted: " << sendSet[1] << " vs " << recvSet[1] << "\n";
+
+
+		// set up networking
+		std::string name = "n";
+		IOService ios;
+		Endpoint ep0(ios, "localhost", 1212, EpMode::Client, name);
+		Endpoint ep1(ios, "localhost", 1212, EpMode::Server, name);
+
+		std::vector<Channel> sendChls(numThreads), recvChls(numThreads);
+		for (u64 i = 0; i < numThreads; ++i)
+		{
+			sendChls[i] = ep1.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+			recvChls[i] = ep0.addChannel("chl" + std::to_string(i), "chl" + std::to_string(i));
+		}
+
+
+		KrtwSender sender;
+		KrtwReceiver recv;
+		auto thrd = std::thread([&]() {
+			recv.init(setSize, setSize, 40, prng1, recvChls);
+			recv.outputNoOT(recvSet, recvChls);
+
+		});
+
+		sender.init(setSize, setSize, 40, prng0, sendChls);
+		sender.outputNoOT(sendSet, sendChls);
+		thrd.join();
+
+		/*std::cout << "=======sender.simple.print(3);===========\n";
+		sender.simple.print();
+		std::cout << "=======recv.simple.print(3)===========\n";
+		recv.simple.print();*/
+
+		std::cout << "recv.mDisjointedOutput.size(): " << recv.mDisjointedOutput.size() << std::endl;
+		for (u64 i = 0; i < recv.mDisjointedOutput.size(); ++i)//thrds.size()
+		{
+			std::cout << "#id: " << recv.mDisjointedOutput[i] << std::endl;
+		}
+
+
+		for (u64 i = 0; i < numThreads; ++i)
+		{
+			sendChls[i].close(); recvChls[i].close();
+		}
+
+		ep0.stop(); ep1.stop();	ios.stop();
+
+	}
+
 
 
 	void PSU_HashingParameters_Calculation() {
