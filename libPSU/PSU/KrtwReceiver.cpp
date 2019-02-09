@@ -184,7 +184,7 @@ namespace osuCrypto
 
 
 				//==========================PEQT==========================
-#if 1
+#if 0
 				std::vector<block> recvEncoding(curStepSize*theirMaxBinSize);
 
 				for (u64 k = 0; k < curStepSize; ++k)
@@ -238,10 +238,55 @@ namespace osuCrypto
 							//std::cout << binIdx << "\t" << itemTheirIdx << "\t" << std::endl;
 						}
 
+						
+
 					}
 				}
 				//gTimer.setTimePoint("r PMT output");
 
+
+#endif
+
+
+				//==========================receive S* directly==========================
+#if 1
+		
+				u64 maskPEQTlength = mPsiSecParam / 8;
+				std::vector<u8> recvBuff;
+				chl.recv(recvBuff); //receive OPRF(s*)
+				if (recvBuff.size() != curStepSize*theirMaxBinSize*maskPEQTlength)
+				{
+					std::cout << "error @ " << (LOCATION) << std::endl;
+					throw std::runtime_error(LOCATION);
+				}
+
+				BitVector bitPSU(curStepSize*theirMaxBinSize);
+
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					u64 binIdx = i + k;
+					for (u64 itemTheirIdx = 0; itemTheirIdx < theirMaxBinSize; ++itemTheirIdx)
+					{
+						block rcv;
+						memcpy((u8*)&rcv, recvBuff.data() + (k*theirMaxBinSize + itemTheirIdx)* maskPEQTlength, maskPEQTlength);
+
+#ifdef DEBUG
+						if (binIdx == 1 && itemTheirIdx == 1)
+							std::cout << IoStream::lock << "rcv " << rcv << std::endl << IoStream::unlock;
+
+#endif
+						if (!memcmp(&rcv, &Ss[binIdx][itemTheirIdx], maskPEQTlength))  //get bit from PMT
+						{
+							bitPSU[k*theirMaxBinSize + itemTheirIdx] = 1;
+							//std::cout << binIdx << "\t" << itemTheirIdx << "\t" << std::endl;
+						}
+
+					}
+				}
+				//gTimer.setTimePoint("r PMT output");
+
+
+#endif
 
 
 				//==========================Rabin OT==========================
@@ -318,7 +363,7 @@ namespace osuCrypto
 					}
 				}
 #endif	
-#endif
+
 			}
 		};
 

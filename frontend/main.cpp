@@ -263,7 +263,7 @@ void usage(const char* argv0)
 int main(int argc, char** argv)
 {
 	
-	u64 setSize = 1 << 12, numThreads = 1;
+	u64 setSize = 1 << 18, numThreads = 1;
 
 
 	if (argv[3][0] == '-' && argv[3][1] == 'n'
@@ -316,12 +316,15 @@ int main(int argc, char** argv)
 		thrd.join();
 
 	}
-	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 0) {
+	else if (argv[1][0] == '-' && argv[1][1] == 'r' && argv[1][2] == '0') {
+
+		//std::cout << "Sender: \n";
 
 		Sender(setSize, sendSet, numThreads);
 	}
-	else if (argv[1][0] == '-' && argv[1][1] == 'r' && atoi(argv[2]) == 1) {
-		
+	else if (argv[1][0] == '-' && argv[1][1] == 'r' && argv[1][2] == '1') {
+		//std::cout << "Receiver: \n";
+
 		Receiver(setSize, recvSet, numThreads);
 	}
 	else {

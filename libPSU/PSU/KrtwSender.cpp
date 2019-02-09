@@ -185,8 +185,9 @@ namespace osuCrypto
 				//gTimer.setTimePoint("s compute s");
 
 
+#if 0
 				//==========================PEQT==========================
-#if 1
+
 				sendOprf.recvCorrection(chl, curStepSize*simple.mMaxBinSize);
 				std::vector<block> sendEncoding(curStepSize*simple.mMaxBinSize);
 
@@ -215,9 +216,34 @@ namespace osuCrypto
 				chl.asyncSend(std::move(sendBuff)); //send OPRF(s*) == done with sending PEQT
 
 				//gTimer.setTimePoint("s sending OPRF(s*)");
+#endif
+
+				//==========================send S* directly==========================
+#if 1
+
+				u64 maskPEQTlength = mPsiSecParam / 8;
+				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskPEQTlength);
+
+				int idxSendBuff = 0;
+
+				for (u64 k = 0; k < curStepSize; ++k)
+				{
+					u64 binIdx = i + k;
+
+					for (u64 itemIdx = 0; itemIdx < simple.mMaxBinSize; ++itemIdx)
+					{
+						memcpy(sendBuff.data() + idxSendBuff, (u8*)&Sr[binIdx][itemIdx], maskPEQTlength);
+						idxSendBuff += maskPEQTlength;
+
+					}
+				}
+
+				chl.asyncSend(std::move(sendBuff)); //send (s*) 
+
+#endif
 
 
-#if 1 //PEQT
+#if 1 //Rabin OT
 
 
 				//==========================Rabin OT==========================
@@ -266,7 +292,7 @@ namespace osuCrypto
 				//gTimer.setTimePoint("s Rabin OT");
 
 #endif		
-#endif
+
 			}
 
 
