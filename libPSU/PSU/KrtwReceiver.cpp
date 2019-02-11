@@ -208,7 +208,7 @@ namespace osuCrypto
 
 
 
-				u64 maskPEQTlength = mPsiSecParam / 8;
+				u64 maskPEQTlength = polyMaskBytes;// mPsiSecParam / 8;
 				std::vector<u8> recvBuff;
 				chl.recv(recvBuff); //receive OPRF(s*)
 				if (recvBuff.size() != curStepSize*theirMaxBinSize*maskPEQTlength)
@@ -251,7 +251,7 @@ namespace osuCrypto
 				//==========================receive S* directly==========================
 #if 1
 		
-				u64 maskPEQTlength = mPsiSecParam / 8;
+				u64 maskPEQTlength = polyMaskBytes;// mPsiSecParam / 8;
 				std::vector<u8> recvBuff;
 				chl.recv(recvBuff); //receive OPRF(s*)
 				if (recvBuff.size() != curStepSize*theirMaxBinSize*maskPEQTlength)

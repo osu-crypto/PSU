@@ -207,7 +207,7 @@ namespace osuCrypto
 				}
 
 
-				u64 maskPEQTlength = mPsiSecParam / 8;
+				u64 maskPEQTlength = polyMaskBytes;// mPsiSecParam / 8;
 				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskPEQTlength);
 
 				for (u64 c = 0; c < sendEncoding.size(); ++c)
@@ -221,7 +221,7 @@ namespace osuCrypto
 				//==========================send S* directly==========================
 #if 1
 
-				u64 maskPEQTlength = mPsiSecParam / 8;
+				u64 maskPEQTlength = polyMaskBytes;// mPsiSecParam / 8;
 				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskPEQTlength);
 
 				int idxSendBuff = 0;
@@ -475,7 +475,7 @@ namespace osuCrypto
 				}
 
 
-				u64 maskPEQTlength = mPsiSecParam / 8;
+				u64 maskPEQTlength = polyMaskBytes;// mPsiSecParam / 8;
 				std::vector<u8> sendBuff(curStepSize*simple.mMaxBinSize*maskPEQTlength);
 
 				for (u64 c = 0; c < sendEncoding.size(); ++c)
