@@ -1,7 +1,7 @@
 # Private Set Union
 This is the implementation of our paper: **Scalable Private Set Union from Symmetric-Key Techniques **[[ePrint](https://eprint.iacr.org/2019/xxx.pdf)]. 
 
-Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz and 256GB of RAM`) with a single thread per party, each party has `2^20` items, our `spot-low` protocol requires  `270` seconds and `63.1` MB , and our `spot-fast` protocol requires  `25.6` seconds and `76.4` MB. 
+Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz and 256GB of RAM`) with a single thread per party, each party has `2^20` items, our protocol requires  `239` seconds and `144` MB.
 
 ## Installations
 
@@ -14,9 +14,8 @@ Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz a
 ### Building the Project
 After cloning project from git,
 ##### Windows:
-1. build cryptoTools,libOTe, and libOPRF projects in order.
-2. add argument for bOPRFmain project (for example: -u)
-3. run bOPRFmain project
+1. build cryptoTools,libOTe, and libPSU projects in order.
+3. run frontend project
  
 ##### Linux:
 1. make (requirements: `CMake`, `Make`, `g++` or similar)
