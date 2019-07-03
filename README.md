@@ -1,17 +1,51 @@
-### Windows
+# Private Set Union
+This is the implementation of our paper: **Scalable Private Set Union from Symmetric-Key Techniques **[[ePrint](https://eprint.iacr.org/2019/xxx.pdf)]. 
 
-First clone and build libOTe, libPoly. libOTe, libPoly and libPSU should share the same parent directory. Then clone this library and open the solution in Visaul Studio.
+Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz and 256GB of RAM`) with a single thread per party, each party has `2^20` items, our `spot-low` protocol requires  `270` seconds and `63.1` MB , and our `spot-fast` protocol requires  `25.6` seconds and `76.4` MB. 
 
-### Linux
+## Installations
 
+### Required libraries
+ C++ compiler with C++14 support. There are several library dependencies including [`Boost`](https://sourceforge.net/projects/boost/), [`Miracl`](https://github.com/miracl/MIRACL), [`NTL`](http://www.shoup.net/ntl/) with GMP, and [`libOTe`](https://github.com/osu-crypto/libOTe). For `libOTe`, it requires CPU supporting `PCLMUL`, `AES-NI`, and `SSE4.1`. Optional: `nasm` for improved SHA1 performance.   Our code has been tested on both Windows (Microsoft Visual Studio) and Linux. To install the required libraries: 
+  * For building boost, miracl and libOTe, please follow the more instructions at [`libOTe`](https://github.com/osu-crypto/libOTe)
+  * For NTL with GMP, `cd ./thirdparty`, and run `gmp.get` and `ntl.get`.   
 
-libOTe, libPoly and libPSU should share the same parent directory.
+NOTE: if you meet prolem with NTL, try to do the following and read [`Building and using NTL with GMP`](https://www.shoup.net/ntl/doc/tour-gmp.html): 
+###### change ntl code
 
 ```
+   struct MatPrime_crt_helper_deleter_policy {
+      static void deleter(MatPrime_crt_helper *p) { MatPrime_crt_helper_deleter(p); }
+   };
+```
+to
+```
+   struct MatPrime_crt_helper_deleter_policy {
+      static void deleter(MatPrime_crt_helper *p) {; }
+   };
+```
 
-git clone git@github.com:nitrieu/psu_impl.git
-cd psu_impl
-[libOTe clone build steps](https://github.com/nitrieu/libOTe)
-[libPoly clone build steps] git@github.com:nitrieu/libPoly.git
-cmake .
-make
+In lip.h, change _ntl_general_rem_one_struct to be a struct.
+
+### Building the Project
+After cloning project from git,
+##### Windows:
+1. build cryptoTools,libOTe, and libOPRF projects in order.
+2. add argument for bOPRFmain project (for example: -u)
+3. run bOPRFmain project
+ 
+##### Linux:
+1. make (requirements: `CMake`, `Make`, `g++` or similar)
+2. for test:
+	./bin/frontend.exe -t
+
+
+## Running the code
+
+	./bin/frontend.exe -r 1 
+	& ./bin/frontend.exe -r 0 
+
+		
+## Help
+For any questions on building or running the library, please contact [`Ni Trieu`](http://people.oregonstate.edu/~trieun/) at trieun at oregonstate dot edu
+
