@@ -10,22 +10,6 @@ Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz a
   * For building boost, miracl and libOTe, please follow the more instructions at [`libOTe`](https://github.com/osu-crypto/libOTe)
   * For NTL with GMP, `cd ./thirdparty`, and run `gmp.get` and `ntl.get`.   
 
-NOTE: if you meet prolem with NTL, try to do the following and read [`Building and using NTL with GMP`](https://www.shoup.net/ntl/doc/tour-gmp.html): 
-###### change ntl code
-
-```
-   struct MatPrime_crt_helper_deleter_policy {
-      static void deleter(MatPrime_crt_helper *p) { MatPrime_crt_helper_deleter(p); }
-   };
-```
-to
-```
-   struct MatPrime_crt_helper_deleter_policy {
-      static void deleter(MatPrime_crt_helper *p) {; }
-   };
-```
-
-In lip.h, change _ntl_general_rem_one_struct to be a struct.
 
 ### Building the Project
 After cloning project from git,
