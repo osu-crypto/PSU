@@ -5,16 +5,25 @@ Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz a
 
 ## Installations
 
+### Building the Project
+
+#### Quick Installation (Linux)
+`$ git clone https://github.com/osu-crypto/PSU.git`
+`$ cd PSU`
+`$ bash buildAll.get`
+
+
+If you have any problem, see belows.
+
 ### Required libraries
  C++ compiler with C++14 support. There are several library dependencies including [`Boost`](https://sourceforge.net/projects/boost/), [`Miracl`](https://github.com/miracl/MIRACL), [`NTL`](http://www.shoup.net/ntl/) with GMP, and [`libOTe`](https://github.com/osu-crypto/libOTe). For `libOTe`, it requires CPU supporting `PCLMUL`, `AES-NI`, and `SSE4.1`. Optional: `nasm` for improved SHA1 performance.   Our code has been tested on both Windows (Microsoft Visual Studio) and Linux. To install the required libraries: 
   * For building boost, miracl and libOTe, please follow the more instructions at [`libOTe`](https://github.com/osu-crypto/libOTe)
-  * For NTL with GMP, `cd ./thirdparty`, and run `gmp.get` and `ntl.get`.   
+  * For NTL with GMP, `cd ./thirdparty`, and run `bash all.get`.   
 
 
-### Building the Project
-After cloning project from git,
+
 ##### Windows:
-1. build cryptoTools,libOTe, and libPSU projects in order.
+1. build cryptoTools, libOTe, and libPSU projects in order.
 3. run frontend project
  
 ##### Linux:
