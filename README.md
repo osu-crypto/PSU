@@ -9,7 +9,9 @@ Evaluating on a single server (`2 36-cores Intel Xeon CPU E5-2699 v3 @ 2.30GHz a
 
 #### Quick Installation (Linux)
 `$ git clone https://github.com/osu-crypto/PSU.git`
+
 `$ cd PSU`
+
 `$ bash buildAll.get`
 
 
