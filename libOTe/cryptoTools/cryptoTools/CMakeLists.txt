@@ -105,15 +105,30 @@ INSTALL(FILES ${MIRACL_LIB} DESTINATION lib)
 
 set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/linux/boost/")
 
+if(EXISTS ${BOOST_ROOT})
+   message("BOOST_ROOT: " ${BOOST_ROOT})
+   set(Boost_NO_SYSTEM_PATHS ON)
+endif()
+    
 set(Boost_USE_STATIC_LIBS        ON) # only find static libs
 set(Boost_USE_MULTITHREADED      ON)
 set(Boost_USE_STATIC_RUNTIME     ON)
 
-find_package(Boost COMPONENTS system thread)
+macro(findBoost)
+      find_package(Boost 1.65.1 COMPONENTS system thread)
+endmacro()
+    
+findBoost()
+# then look at system dirs
+if(NOT Boost_FOUND)
+     set(Boost_NO_SYSTEM_PATHS  OFF)
+     findBoost()
+endif()
+    
 
 if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Failed to find boost at " ${Boost_Lib_Dirs} " Need system thread")
-endif()
+        message(FATAL_ERROR "Failed to find boost 1.65 or newer. Looked at system dirs and: " ${BOOST_ROOT})
+ endif()
 
 
 #MESSAGE(STATUS "boost ---  ${Boost_LIBRARIES}")
@@ -130,4 +145,5 @@ ENDIF(INSTALL_BOOST)
 
 #file(COPY ${Boost_LIBRARIES}  DESTINATION ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 #FILE(COPY "${Boost_INCLUDE_DIR}/boost" DESTINATION "${CMAKE_SOURCE_DIR}/include/boost")
+message(STATUS "Boost_LIB: ${Boost_LIBRARIES}" )
 message(STATUS "Boost_include  ${Boost_INCLUDE_DIR}" )
