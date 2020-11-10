@@ -318,12 +318,12 @@ int main(int argc, char** argv)
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && argv[1][2] == '0') {
 
-		//std::cout << "Sender: \n";
+		std::cout << "===Sender===\t setSize:" << setSize << "\t numThreads: " << numThreads << "\n";
 
 		Sender(setSize, sendSet, numThreads);
 	}
 	else if (argv[1][0] == '-' && argv[1][1] == 'r' && argv[1][2] == '1') {
-		//std::cout << "Receiver: \n";
+		std::cout << "===Receiver===\t setSize:" << setSize << "\t numThreads: " << numThreads << "\n";
 
 		Receiver(setSize, recvSet, numThreads);
 	}
