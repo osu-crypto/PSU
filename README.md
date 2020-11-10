@@ -28,13 +28,20 @@ If you have any problem, see below.
 ##### Linux:
 1. make (requirements: `CMake`, `Make`, `g++` or similar)
 2. for test:
-	./bin/frontend.exe -t
+	./bin/frontend.exe -u
 
 
 ## Running the code
+The database is generated randomly. 
 
-	./bin/frontend.exe -r 1 
-	& ./bin/frontend.exe -r 0 
+#### Flags:
+    -u		unit test which computes PSU, each with set size 2^12 in the semi-honest setting
+	-n		log(set size)
+	-t		number of threads
+#### Example:	
+
+	./bin/frontend.exe -r1 -n 12 -t 1
+	& ./bin/frontend.exe -r0 -n 12 -t 1
 
 		
 ## Help

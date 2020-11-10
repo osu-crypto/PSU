@@ -266,11 +266,11 @@ int main(int argc, char** argv)
 	u64 setSize = 1 << 8, numThreads = 1;
 
 
-	if (argv[3][0] == '-' && argv[3][1] == 'n'
-		&& argv[5][0] == '-' && argv[5][1] == 't')
+	if (argv[2][0] == '-' && argv[2][1] == 'n'
+		&& argv[4][0] == '-' && argv[4][1] == 't')
 	{
-		setSize = 1 << atoi(argv[4]);
-		numThreads = atoi(argv[6]);
+		setSize = 1 << atoi(argv[3]);
+		numThreads = atoi(argv[5]);
 	}
 
 
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
 	return 0;
 #endif
 
-	if (argv[1][0] == '-' && argv[1][1] == 't') {
+	if (argv[1][0] == '-' && argv[1][1] == 'u') {
 		
 		isTest = true;
 		std::thread thrd = std::thread([&]() {
