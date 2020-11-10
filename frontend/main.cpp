@@ -254,10 +254,10 @@ void PSU_Test_Impl()
 void usage(const char* argv0)
 {
 	std::cout << "Error! Please use:" << std::endl;
-	std::cout << "\t 1. For unit test: " << argv0 << " -t" << std::endl;
+	std::cout << "\t 1. For unit test: " << argv0 << " -u" << std::endl;
 	std::cout << "\t 2. For simulation (2 terminal): " << std::endl;;
-	std::cout << "\t\t Sender terminal: " << argv0 << " -r 0" << std::endl;
-	std::cout << "\t\t Receiver terminal: " << argv0 << " -r 1" << std::endl;
+	std::cout << "\t\t Sender terminal: " << argv0 << " -r0" << std::endl;
+	std::cout << "\t\t Receiver terminal: " << argv0 << " -r1" << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -266,12 +266,13 @@ int main(int argc, char** argv)
 	u64 setSize = 1 << 8, numThreads = 1;
 
 
-	if (argv[2][0] == '-' && argv[2][1] == 'n'
-		&& argv[4][0] == '-' && argv[4][1] == 't')
-	{
+	if (argv[1][1] != 'u' && argv[2][0] == '-' && argv[2][1] == 'n')
 		setSize = 1 << atoi(argv[3]);
+
+
+	if (argv[1][1] != 'u' &&  argv[4][0] == '-' && argv[4][1] == 't')
 		numThreads = atoi(argv[5]);
-	}
+
 
 
 	std::cout << "SetSize: " << setSize << " vs " << setSize << "   |  numThreads: " << numThreads << "\t";
